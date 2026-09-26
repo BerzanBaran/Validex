@@ -8,12 +8,14 @@
 - Saf alan kuralları: komisyon, hash, satın alma ve kullanım kontrolleri
 - İlk müşteri vitrini
 
-## M2 — Cüzdan kimliği
+## M2 — Cüzdan kimliği (devam ediyor)
 
-- Tek kullanımlık ve kısa ömürlü nonce
-- Phantom ile mesaj imzalama
-- Ed25519 doğrulama ve kısa ömürlü erişim tokenı
-- Rol tabanlı işletme/yönetici yetkileri
+- [x] Tek kullanımlık ve kısa ömürlü nonce
+- [x] Phantom ile mesaj imzalama
+- [x] Ed25519 doğrulama ve kısa ömürlü erişim tokenı
+- [x] Merchant rolüyle kampanya oluşturma koruması
+- [ ] İşletme başvurusu ve yönetici onay akışı
+- [ ] Yönetici endpoint'leri ve ayrıntılı rol matrisi
 
 ## M3 — Anchor escrow programı
 
@@ -33,4 +35,3 @@
 - İşletme başvurusu ve manuel yönetici onayı
 - Satış/gelir raporu, denetim kayıtları ve rate limiting
 - Tehdit modellemesi, yük testleri ve devnet uçtan uca test
-

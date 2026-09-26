@@ -1,16 +1,14 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_session
+from app.api.dependencies import MerchantUserDep, SessionDep
 from app.models.entities import Campaign, CampaignStatus, Merchant, VerificationStatus
 from app.schemas.campaigns import CampaignCreate, CampaignRead
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CampaignStatusQuery = Annotated[CampaignStatus | None, Query(alias="status")]
 LimitQuery = Annotated[int, Query(ge=1, le=100)]
 
@@ -43,6 +41,7 @@ async def get_campaign(
 async def create_campaign(
     payload: CampaignCreate,
     session: SessionDep,
+    current_user: MerchantUserDep,
 ) -> Campaign:
     merchant = await session.get(Merchant, payload.merchant_id)
     if merchant is None:
@@ -51,6 +50,11 @@ async def create_campaign(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Merchant must be verified before creating campaigns",
+        )
+    if merchant.owner_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Merchant account does not belong to the authenticated wallet",
         )
 
     campaign = Campaign(**payload.model_dump(), status=CampaignStatus.DRAFT)

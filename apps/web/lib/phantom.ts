@@ -10,6 +10,7 @@ type PhantomProvider = {
   publicKey?: PhantomPublicKey | null;
   connect(): Promise<{ publicKey: PhantomPublicKey }>;
   disconnect(): Promise<void>;
+  signMessage(message: Uint8Array, display?: "utf8"): Promise<{ signature: Uint8Array }>;
   on?(event: "accountChanged", callback: (key: PhantomPublicKey | null) => void): void;
   removeListener?(event: "accountChanged", callback: (key: PhantomPublicKey | null) => void): void;
 };
@@ -40,22 +41,35 @@ export function usePhantomWallet() {
     return () => provider?.removeListener?.("accountChanged", onAccountChanged);
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (): Promise<string | null> => {
     const provider = getProvider();
     if (!provider?.isPhantom) {
       setError("Phantom bulunamadı. Önce Phantom cüzdan eklentisini kurmalısınız.");
-      return;
+      return null;
     }
     try {
       setConnecting(true);
       setError(null);
       const response = await provider.connect();
-      setAddress(response.publicKey.toString());
+      const connectedAddress = response.publicKey.toString();
+      setAddress(connectedAddress);
+      return connectedAddress;
     } catch {
       setError("Cüzdan bağlantısı kullanıcı tarafından reddedildi.");
+      return null;
     } finally {
       setConnecting(false);
     }
+  }, []);
+
+  const signMessage = useCallback(async (message: string): Promise<string> => {
+    const provider = getProvider();
+    if (!provider?.isPhantom) throw new Error("Phantom cüzdanı bulunamadı.");
+    const encoded = new TextEncoder().encode(message);
+    const response = await provider.signMessage(encoded, "utf8");
+    let binary = "";
+    for (const byte of response.signature) binary += String.fromCharCode(byte);
+    return window.btoa(binary);
   }, []);
 
   const disconnect = useCallback(async () => {
@@ -68,6 +82,5 @@ export function usePhantomWallet() {
     [address],
   );
 
-  return { address, shortAddress, connecting, error, connect, disconnect };
+  return { address, shortAddress, connecting, error, connect, disconnect, signMessage };
 }
-

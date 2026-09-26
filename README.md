@@ -57,3 +57,21 @@ Validex hiçbir kullanıcı veya işletme private key/seed phrase bilgisini alma
 ## Arayüz demo akışı
 
 İşletme panelinden oluşturulan kampanyalar tarayıcının yerel deposuna kaydedilir ve müşteri panelinde hemen görünür. Müşteri panelindeki demo satın alma stok düşürür ve kuponu ilgili cüzdanın “Kuponlarım” alanına ekler. Bu akış ürün arayüzünü doğrulamak içindir; Anchor escrow programı tamamlanana kadar gerçek USDC transferi yapmaz.
+
+## Cüzdanla giriş
+
+Paneldeki Phantom bağlantısı artık adres sahipliğini mesaj imzasıyla doğrular:
+
+1. `POST /api/v1/auth/challenge` tek kullanımlık, beş dakika geçerli mesaj üretir.
+2. Phantom mesajı Ed25519 ile imzalar; bu işlem transfer veya ağ ücreti oluşturmaz.
+3. `POST /api/v1/auth/verify` imzayı Solana public key'iyle doğrular.
+4. Başarılı girişte 15 dakikalık erişim tokenı verilir ve challenge tekrar kullanılamaz.
+5. `GET /api/v1/auth/me` tokenın bağlı olduğu kullanıcı ve rolü döndürür.
+
+Erişim tokenı tarayıcı sekmesine özel `sessionStorage` içinde tutulur. Gerçek kampanya oluşturma API'si yalnızca `merchant` rolüne ve ilgili işletme kaydının sahibi olan cüzdana açıktır.
+
+Yerel API çalışırken uçtan uca kimlik duman testini çalıştırmak için:
+
+```powershell
+python services/api/scripts/smoke_auth.py
+```

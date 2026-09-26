@@ -50,6 +50,7 @@ button { font:inherit; }
 .walletWrap { position:relative; display:flex; justify-content:flex-end; }
 .wallet:disabled { opacity:.6; cursor:wait; }
 .walletConnected { background:#e2efbd; color:var(--ink); }
+.walletPending { background:#7057a8; }
 .walletDot { display:inline-block; width:7px; height:7px; margin-right:7px; background:#6fa300; border-radius:50%; }
 .walletError { position:absolute; top:52px; right:0; width:280px; padding:10px 12px; color:#7e2f27; background:#fff0eb; border:1px solid #efc8bd; border-radius:10px; font-size:11px; line-height:1.4; }
 .dashboardHero { min-height:330px; display:grid; grid-template-columns:1.35fr .65fr; gap:70px; align-items:center; padding-block:64px 46px; }

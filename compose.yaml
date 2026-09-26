@@ -25,6 +25,7 @@ services:
       VALIDEX_DATABASE_URL: postgresql+asyncpg://validex:validex@postgres:5432/validex
       VALIDEX_AUTO_CREATE_SCHEMA: "true"
       VALIDEX_CORS_ORIGINS: '["http://localhost:3000"]'
+      VALIDEX_JWT_SECRET: ${VALIDEX_JWT_SECRET:-dev-only-change-this-secret-before-production-1234}
     ports:
       - "8000:8000"
     depends_on:
@@ -50,4 +51,3 @@ services:
 volumes:
   validex-postgres:
   validex-node-modules:
-
