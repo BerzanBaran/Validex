@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "validex-api"
+version = "0.1.0"
+description = "Validex off-chain API"
+readme = "README.md"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+  "asyncpg>=0.31,<0.32",
+  "fastapi>=0.141,<0.142",
+  "pydantic-settings>=2.7,<3",
+  "sqlalchemy[asyncio]>=2.1.1,<2.2",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx2>=2.13,<3",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

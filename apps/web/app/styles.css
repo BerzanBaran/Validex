@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@500;600;700&display=swap');
+
+:root { --ink:#17251e; --paper:#f5f1e8; --lime:#d8ff62; --line:rgba(23,37,30,.16); }
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; color:var(--ink); background:var(--paper); font-family:"DM Sans",sans-serif; }
+a { color:inherit; text-decoration:none; }
+button { font:inherit; }
+.shell { width:min(1180px,calc(100% - 40px)); margin-inline:auto; }
+.nav { height:92px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+.brand { font:700 27px "Manrope",sans-serif; letter-spacing:-1.5px; }
+.brand span { color:#78a500; }
+.navLinks { display:flex; align-items:center; gap:34px; font-size:14px; font-weight:600; }
+.wallet,.primary { border:0; border-radius:999px; background:var(--ink); color:#fff; padding:14px 22px; cursor:pointer; }
+.hero { min-height:650px; display:grid; grid-template-columns:1.25fr .75fr; gap:80px; align-items:center; padding-block:72px; }
+.eyebrow { font-size:12px; font-weight:700; letter-spacing:2.1px; color:#6b776f; }
+.hero h1 { margin:18px 0 24px; font:600 clamp(52px,6.4vw,88px)/.96 "Manrope",sans-serif; letter-spacing:-5px; }
+.hero h1 em { font-family:Georgia,serif; font-weight:400; color:#6f8d21; }
+.lead { max-width:600px; font-size:19px; line-height:1.6; color:#536158; }
+.heroActions { display:flex; align-items:center; gap:26px; margin-top:36px; }
+.primary { padding:17px 25px; font-weight:600; }
+.primary span { margin-left:18px; }
+.trust { font-size:13px; color:#66736b; }.trust b{color:#65a500;}
+.heroCard { min-height:464px; background:#203b2d; color:white; border-radius:28px; padding:28px; box-shadow:0 30px 70px rgba(23,37,30,.22); transform:rotate(2deg); display:flex; flex-direction:column; overflow:hidden; position:relative; }
+.heroCard:after { content:""; position:absolute; width:330px; height:330px; border:75px solid #cfef5d; border-radius:50%; right:-185px; top:78px; opacity:.95; }
+.ticketTop,.ticketFoot { display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1; }
+.tag { background:var(--lime); color:var(--ink); padding:8px 11px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:1px; }
+.ticketIcon { font-size:32px; }
+.ticketBody { margin:auto 0; position:relative; z-index:1; }
+.ticketBody p { opacity:.72; }.ticketBody h2 { font:600 42px/1.02 "Manrope"; letter-spacing:-2px; margin:10px 0 28px; }
+.ticketPrice { display:flex; align-items:center; gap:10px; }.ticketPrice strong{font:700 68px/1 "Manrope"}.ticketPrice span{font-weight:600}.ticketPrice small{opacity:.55;font-weight:400}.ticketFoot{font-size:12px;opacity:.66;border-top:1px dashed rgba(255,255,255,.35);padding-top:20px}
+.campaignSection { background:#e9e4d8; padding:90px 0 100px; }
+.sectionTitle { display:flex; justify-content:space-between; align-items:end; margin-bottom:32px; }.sectionTitle h2,.how h2{font:600 40px "Manrope";letter-spacing:-2px;margin:9px 0}.filter{background:transparent;border:1px solid var(--line);border-radius:99px;padding:12px 16px;color:var(--ink)}
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+.campaignCard { background:var(--paper); border-radius:20px; overflow:hidden; transition:.25s ease; }.campaignCard:hover{transform:translateY(-5px)}
+.cardVisual { height:220px; padding:22px; display:flex; align-items:end; position:relative; }.cardVisual>span{position:absolute;top:18px;left:18px;background:rgba(255,255,255,.75);padding:7px 10px;border-radius:99px;font-size:11px}.cardVisual b{font:700 82px/1 "Manrope";letter-spacing:-6px}.cardVisual small{font-weight:700;margin:0 0 10px 7px}.coffee{background:#d4a678}.berry{background:#d995ae}.lime{background:#bdd76c}
+.cardCopy{padding:22px}.cardCopy>p{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:#68746d}.cardCopy h3{font:600 21px/1.3 "Manrope";min-height:54px}.cardCopy>div{display:flex;justify-content:space-between;align-items:center;color:#6a756e;font-size:13px}.cardCopy button{border:0;background:var(--ink);color:#fff;width:38px;height:38px;border-radius:50%}
+.how{padding:105px 0 120px}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:55px;margin-top:55px}.steps>div{border-top:1px solid var(--line);padding-top:23px}.steps span{color:#829459;font-size:12px}.steps h3{font:600 21px "Manrope"}.steps p{color:#647068;line-height:1.6}
+@media(max-width:800px){.navLinks>a{display:none}.hero{grid-template-columns:1fr;gap:25px;padding-block:55px}.hero h1{letter-spacing:-3px}.heroCard{min-height:400px;transform:none}.grid,.steps{grid-template-columns:1fr}.sectionTitle{align-items:start;gap:20px;flex-direction:column}.heroActions{align-items:flex-start;flex-direction:column}.campaignSection{padding-block:65px}}
+
+/* Role dashboards */
+.dashboardPage { min-height:100vh; background:#f4f1e9; padding-bottom:100px; }
+.dashboardShell { width:min(1220px,calc(100% - 40px)); margin-inline:auto; }
+.dashboardHeader { position:sticky; top:0; z-index:20; background:rgba(244,241,233,.94); border-bottom:1px solid var(--line); backdrop-filter:blur(18px); }
+.dashboardNav { min-height:78px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:20px; }
+.dashboardNav>.wallet,.dashboardNav>.walletWrap { justify-self:end; }
+.roleSwitch { display:flex; padding:4px; background:#e8e4da; border-radius:999px; }
+.roleSwitch a { padding:10px 18px; border-radius:999px; color:#667168; font-size:13px; font-weight:600; }
+.roleSwitch a.active { background:var(--ink); color:white; box-shadow:0 4px 12px rgba(23,37,30,.16); }
+.walletWrap { position:relative; display:flex; justify-content:flex-end; }
+.wallet:disabled { opacity:.6; cursor:wait; }
+.walletConnected { background:#e2efbd; color:var(--ink); }
+.walletDot { display:inline-block; width:7px; height:7px; margin-right:7px; background:#6fa300; border-radius:50%; }
+.walletError { position:absolute; top:52px; right:0; width:280px; padding:10px 12px; color:#7e2f27; background:#fff0eb; border:1px solid #efc8bd; border-radius:10px; font-size:11px; line-height:1.4; }
+.dashboardHero { min-height:330px; display:grid; grid-template-columns:1.35fr .65fr; gap:70px; align-items:center; padding-block:64px 46px; }
+.dashboardHero h1 { max-width:770px; margin:12px 0 18px; font:600 clamp(42px,5vw,65px)/1 "Manrope",sans-serif; letter-spacing:-3.5px; }
+.dashboardHero>div>p:last-child { max-width:680px; color:#627067; font-size:17px; line-height:1.6; }
+.balanceCard,.verificationCard { padding:27px; color:white; background:#203b2d; border-radius:22px; box-shadow:0 18px 45px rgba(23,37,30,.14); }
+.balanceCard span,.verificationCard span { display:block; margin-bottom:18px; color:#bed2c4; font-size:10px; font-weight:700; letter-spacing:1.5px; }
+.balanceCard strong,.verificationCard strong { display:block; margin-bottom:8px; font:600 23px "Manrope"; }
+.balanceCard small,.verificationCard small { color:#a8b9ad; line-height:1.4; }
+.notice { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; padding:15px 18px; background:#e4efc6; border:1px solid #c5d795; border-radius:12px; font-size:14px; }
+.notice button { border:0; background:transparent; color:var(--ink); font-size:23px; cursor:pointer; }
+.dashboardContent,.vouchersSection { padding-top:40px; }
+.contentHeading { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:25px; }
+.contentHeading h2,.formHeading h2 { margin:5px 0; font:600 30px "Manrope"; letter-spacing:-1.4px; }
+.contentHeading>span { color:#69746d; font-size:13px; }
+.contentHeading input { width:min(380px,100%); padding:13px 17px; color:var(--ink); background:white; border:1px solid var(--line); border-radius:999px; outline:none; }
+.contentHeading input:focus { border-color:#7e9d38; box-shadow:0 0 0 3px rgba(126,157,56,.12); }
+.marketGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.marketCard { overflow:hidden; background:white; border:1px solid rgba(23,37,30,.08); border-radius:20px; box-shadow:0 8px 30px rgba(23,37,30,.05); }
+.marketVisual { height:175px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start; }
+.marketVisual.ocean { background:#83b9bd; }
+.marketVisual>span { padding:6px 10px; background:rgba(255,255,255,.72); border-radius:999px; font-size:11px; }
+.marketVisual>div { display:flex; align-items:end; }.marketVisual b{font:700 63px/1 "Manrope";letter-spacing:-4px}.marketVisual small{margin:0 0 7px 6px;font-weight:700}
+.marketCopy { padding:20px; }.marketCopy>p:first-child{margin:0;color:#728078;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}.marketCopy h3{min-height:50px;margin:10px 0;font:600 19px/1.3 "Manrope"}.marketCopy .description{min-height:43px;color:#6a746e;font-size:13px;line-height:1.5}
+.stockLine { display:flex; justify-content:space-between; gap:10px; margin:17px 0; padding-top:14px; border-top:1px solid #ecebe6; color:#68736c; font-size:11px; }
+.actionButton { width:100%; padding:14px 18px; color:white; background:var(--ink); border:0; border-radius:12px; font-weight:700; cursor:pointer; transition:.2s ease; }.actionButton:hover{background:#31523f;transform:translateY(-1px)}
+.emptyState { padding:28px; color:#728078; background:rgba(255,255,255,.56); border:1px dashed #c5c9c2; border-radius:16px; text-align:center; }
+.vouchersSection { margin-top:60px; }
+.voucherList { display:grid; gap:12px; }.voucherRow{display:flex;justify-content:space-between;align-items:center;gap:25px;padding:20px 23px;background:white;border-radius:15px}.voucherRow h3,.manageRow h3{margin:9px 0 5px;font:600 17px "Manrope"}.voucherRow p,.manageRow p{margin:0;color:#758078;font-size:12px}
+.statusPill { display:inline-block; padding:5px 8px; color:#4f6d18; background:#e4f2bd; border-radius:999px; font-size:9px; font-weight:800; letter-spacing:.9px; }.statusPill.paused{color:#875d18;background:#f4dfb0}
+.voucherCode { min-width:250px; padding:12px 16px; background:#f0eee8; border-radius:10px; text-align:right; }.voucherCode small{display:block;margin-bottom:6px;color:#768079;font-size:8px;letter-spacing:1.2px}.voucherCode strong{font:600 14px monospace;letter-spacing:1px}
+.demoBanner { position:fixed; z-index:30; bottom:16px; left:50%; transform:translateX(-50%); padding:10px 17px; color:#f6f0e5; background:rgba(23,37,30,.93); border-radius:999px; box-shadow:0 7px 25px rgba(23,37,30,.2); font-size:11px; white-space:nowrap; }
+.merchantHero { min-height:300px; }.verificationCard{background:#423a27}.metricGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:38px}.metricGrid>div{padding:22px;background:white;border-radius:16px}.metricGrid span{display:block;margin-bottom:12px;color:#738078;font-size:11px;text-transform:uppercase;letter-spacing:1px}.metricGrid strong{font:600 28px "Manrope"}
+.merchantWorkspace { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:30px; align-items:start; }
+.campaignForm,.merchantCampaigns { padding:27px; background:white; border-radius:20px; box-shadow:0 8px 35px rgba(23,37,30,.04); }
+.formHeading { margin-bottom:23px; }.formHeading>p:last-child{margin:7px 0 0;color:#778179;font-size:13px}
+.campaignForm label { display:grid; gap:7px; margin-bottom:15px; color:#4b594f; font-size:12px; font-weight:700; }
+.campaignForm input,.campaignForm textarea,.campaignForm select { width:100%; padding:12px 13px; color:var(--ink); background:#f7f5f0; border:1px solid #deddd7; border-radius:10px; font:400 14px "DM Sans"; outline:none; }.campaignForm textarea{min-height:90px;resize:vertical}.campaignForm input:focus,.campaignForm textarea:focus,.campaignForm select:focus{border-color:#7e9d38;box-shadow:0 0 0 3px rgba(126,157,56,.1)}
+.formRow { display:grid; grid-template-columns:1fr 1fr; gap:13px; }.feePreview{display:grid;grid-template-columns:1fr auto;gap:5px;margin:6px 0 18px;padding:13px;background:#edf2dd;border-radius:10px;font-size:12px}.feePreview small{grid-column:1/-1;color:#78806d}
+.manageList { display:grid; gap:12px; }.manageRow{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:18px;border:1px solid #e6e5df;border-radius:13px}.manageRow button{padding:9px 13px;color:var(--ink);background:white;border:1px solid #cfd3cc;border-radius:9px;cursor:pointer}
+@media(max-width:900px){.dashboardNav{grid-template-columns:1fr auto}.roleSwitch{grid-row:2;grid-column:1/-1;justify-self:center;margin-bottom:12px}.dashboardHero,.merchantWorkspace{grid-template-columns:1fr;gap:25px}.marketGrid{grid-template-columns:1fr 1fr}.metricGrid{grid-template-columns:1fr}.dashboardHero{padding-top:45px}.dashboardHero h1{letter-spacing:-2.5px}}
+@media(max-width:620px){.dashboardShell{width:min(100% - 24px,1220px)}.dashboardNav{grid-template-columns:1fr auto}.dashboardNav .wallet{padding:11px 13px;font-size:11px}.dashboardHero{min-height:0}.marketGrid{grid-template-columns:1fr}.contentHeading{align-items:stretch;flex-direction:column}.contentHeading input{width:100%}.formRow{grid-template-columns:1fr}.voucherRow,.manageRow{align-items:flex-start;flex-direction:column}.voucherCode{width:100%;min-width:0;text-align:left}.demoBanner{bottom:8px;max-width:calc(100% - 20px);white-space:normal;text-align:center}.merchantWorkspace{gap:18px}.campaignForm,.merchantCampaigns{padding:20px}}

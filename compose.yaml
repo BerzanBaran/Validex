@@ -1,0 +1,53 @@
+name: validex
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: validex
+      POSTGRES_USER: validex
+      POSTGRES_PASSWORD: validex
+    ports:
+      - "5432:5432"
+    volumes:
+      - validex-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U validex -d validex"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./services/api
+    environment:
+      VALIDEX_ENVIRONMENT: development
+      VALIDEX_DATABASE_URL: postgresql+asyncpg://validex:validex@postgres:5432/validex
+      VALIDEX_AUTO_CREATE_SCHEMA: "true"
+      VALIDEX_CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/api:/app
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_SOLANA_NETWORK: devnet
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/app
+      - validex-node-modules:/app/node_modules
+
+volumes:
+  validex-postgres:
+  validex-node-modules:
+
