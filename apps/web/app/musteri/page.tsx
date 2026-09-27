@@ -43,9 +43,9 @@ export default function CustomerDashboard() {
       <DashboardHeader role="customer" onAddressChange={setWalletAddress} />
       <section className="dashboardShell dashboardHero">
         <div>
-          <p className="eyebrow">MÜŞTERİ PANELİ</p>
-          <h1>Bugünün güzel bahanesini bul.</h1>
-          <p>Yerel işletmelerin kuponlarını keşfet, cüzdanınla satın al ve tek kullanımlık kodunu sakla.</p>
+          <p className="eyebrow"><span className="sparkle">✳</span> KEŞİF ALANI / MÜŞTERİ</p>
+          <h1>İyi bir gün,<br /><em>yakınında başlar.</em></h1>
+          <p>Mahallendeki güzel fırsatları keşfet. Beğendiğin kuponu cüzdanınla al; QR kodun hep yanında olsun.</p>
         </div>
         <div className="balanceCard">
           <span>DEVNET CÜZDAN BAKİYESİ</span>
@@ -56,7 +56,7 @@ export default function CustomerDashboard() {
 
       <section className="dashboardShell dashboardContent">
         <div className="contentHeading">
-          <div><p className="eyebrow">KEŞFET</p><h2>Satın alınabilir kuponlar</h2></div>
+          <div><p className="eyebrow">BU HAFTANIN KEŞİFLERİ</p><h2>Birini seç, keyfine bak.</h2></div>
           <input
             aria-label="Kampanyalarda ara"
             onChange={(event) => setQuery(event.target.value)}
@@ -71,6 +71,7 @@ export default function CustomerDashboard() {
               <div className={`marketVisual ${campaign.accent}`}>
                 <span>{campaign.area}</span>
                 <div><b>{campaign.priceUsdc}</b><small>USDC</small></div>
+                <i aria-hidden="true">✳</i>
               </div>
               <div className="marketCopy">
                 <p>{campaign.merchant} · {campaign.category}</p>
@@ -86,7 +87,7 @@ export default function CustomerDashboard() {
       </section>
 
       <section className="dashboardShell vouchersSection">
-        <div className="contentHeading"><div><p className="eyebrow">CÜZDANIM</p><h2>Kuponlarım</h2></div><span>{myVouchers.filter((voucher) => voucherAction(voucher) === "redeem").length} kullanılabilir kupon</span></div>
+        <div className="contentHeading"><div><p className="eyebrow">CEBİNDEKİ GÜZEL PLANLAR</p><h2>Kuponlarım <span className="headingSpark">✳</span></h2></div><span>{myVouchers.filter((voucher) => voucherAction(voucher) === "redeem").length} kullanılabilir kupon</span></div>
         {!walletAddress ? (
           <div className="emptyState">Kuponlarınızı görmek için Solflare veya Phantom cüzdanınızı bağlayın.</div>
         ) : marketplace.vouchersLoading ? (

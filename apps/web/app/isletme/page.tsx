@@ -212,9 +212,9 @@ export default function MerchantDashboard() {
       <DashboardHeader role="merchant" onAddressChange={setWalletAddress} />
       <section className="dashboardShell dashboardHero merchantHero">
         <div>
-          <p className="eyebrow">İŞLETME PANELİ</p>
-          <h1>Kampanyanı oluştur, mahallene ulaş.</h1>
-          <p>Kupon fiyatını, stoğunu ve süresini belirle; satışlarını tek ekrandan izle.</p>
+          <p className="eyebrow"><span className="sparkle">✳</span> İŞLETMENİN YENİ VİTRİNİ</p>
+          <h1>Güzel bir teklif,<br /><em>yeni bir müdavim.</em></h1>
+          <p>Kampanyanı oluştur, mahallene ulaş. Kuponlarını, satışlarını ve misafirlerini tek bir yerden yönet.</p>
         </div>
         <div className="verificationCard"><span>İŞLETME DURUMU</span><strong>{!walletAddress ? "Cüzdan bekleniyor" : merchantProfile === undefined ? "Kontrol ediliyor…" : merchantProfile === null && staffCampaigns.length ? "QR doğrulama çalışanı" : merchantProfile === null ? "Başvuru gerekli" : merchantProfile.verification_status === "verified" ? "Onaylı işletme" : merchantProfile.verification_status === "pending" ? "Onay bekleniyor" : "Başvuru reddedildi"}</strong><small>{merchantProfile?.business_name ?? (staffCampaigns.length ? "Atanmış kampanyaların QR kodlarını doğrulayabilirsiniz." : "Kampanya yayımlamak için işletme doğrulaması zorunludur.")}</small></div>
       </section>
@@ -247,7 +247,7 @@ export default function MerchantDashboard() {
 
       <section className="dashboardShell merchantWorkspace">
         <form className="campaignForm" onSubmit={submit}>
-          <div className="formHeading"><p className="eyebrow">YENİ KAMPANYA</p><h2>Kupon yayımla</h2><p>Yayımlanan kupon müşteri panelinde hemen görünür.</p></div>
+          <div className="formHeading"><p className="eyebrow">YENİ BİR FIRSAT</p><h2>Kuponunu tasarla <span className="headingSpark">✳</span></h2><p>Yayımlanan kupon müşteri panelinde hemen görünür.</p></div>
           <label>İşletme adı<input required value={form.merchant} onChange={(event) => update("merchant", event.target.value)} placeholder="Örn. Kavurucu No.7" /></label>
           <label>Kampanya başlığı<input required minLength={3} value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="Örn. İki kahve, tek fiyat" /></label>
           <label>Açıklama<textarea required minLength={10} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Kampanyanın kapsamı ve kullanım koşulları" /></label>
@@ -259,7 +259,7 @@ export default function MerchantDashboard() {
         </form>
 
         <div className="merchantCampaigns">
-          <div className="contentHeading"><div><p className="eyebrow">KAMPANYALARIM</p><h2>Yayındaki kuponlar</h2></div></div>
+          <div className="contentHeading"><div><p className="eyebrow">İŞLETMENİN VİTRİNİ</p><h2>Kampanyaların</h2></div></div>
           {marketplace.campaignError ? <div className="emptyState" role="alert">Kampanyalar API'den yüklenemedi: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Tekrar dene</button></div> : null}
           {!walletAddress ? <div className="emptyState">Kampanyalarınızı görmek için işletme cüzdanınızı bağlayın.</div> : null}
           {walletAddress && !marketplace.campaignError && !myCampaigns.length ? <div className="emptyState">Henüz kampanya oluşturmadınız. Formu doldurarak ilk kuponunuzu yayımlayın.</div> : null}

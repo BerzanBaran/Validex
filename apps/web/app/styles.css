@@ -176,3 +176,82 @@ button { font:inherit; }
 .adminNav{min-height:78px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center}.adminNav>span{color:#6b776f;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px}.adminNav>.wallet,.adminNav>.walletWrap{justify-self:end}.adminHero{display:grid;grid-template-columns:1.2fr .5fr;gap:50px;align-items:center;padding-block:65px}.adminHero h1{margin:12px 0;font:600 clamp(42px,5vw,65px)/1 "Manrope";letter-spacing:-3.5px}.adminHero>div>p:last-child{max-width:680px;color:#657269;line-height:1.6}.adminMetric{padding:28px;color:white;background:#203b2d;border-radius:20px}.adminMetric span{color:#bbccc1;font-size:10px;letter-spacing:1.3px}.adminMetric strong{display:block;margin:15px 0 5px;font:600 45px "Manrope"}.adminMetric small{color:#aabbb0}.adminApplications{padding-bottom:80px}.applicationList{display:grid;gap:13px}.applicationList article{display:flex;justify-content:space-between;align-items:center;gap:25px;padding:22px;background:white;border-radius:16px}.applicationList h3{margin:10px 0 5px;font:600 20px "Manrope"}.applicationList p{margin:0 0 8px;color:#67736b}.applicationList address{font-style:normal;font-size:12px}.applicationList small{display:block;margin-top:8px;color:#88918b;font:500 10px monospace}.decisionActions{display:flex;gap:8px}.decisionActions button{padding:10px 14px;color:#7b352d;background:#fff;border:1px solid #e4c8c3;border-radius:9px;cursor:pointer}.decisionActions .approve{color:white;background:var(--ink);border-color:var(--ink)}
 @media(max-width:900px){.onboardingCard,.adminHero{grid-template-columns:1fr}.adminNav{grid-template-columns:1fr auto}.adminNav>span{display:none}}
 @media(max-width:620px){.onboardingCard form{grid-template-columns:1fr}.onboardingCard label{grid-column:1/-1}.applicationList article{align-items:flex-start;flex-direction:column}.decisionActions{width:100%}.decisionActions button{flex:1}}
+
+/* Validex / warm editorial refresh */
+:root { --ink:#34243b; --paper:#fff8ed; --lime:#ffbd9f; --line:rgba(52,36,59,.16); --coral:#ef704e; --plum:#482b43; --muted:#786d73; }
+body { color:var(--ink); background:var(--paper); }
+::selection { color:var(--ink); background:#ffc1a7; }
+:focus-visible { outline:3px solid var(--coral); outline-offset:3px; }
+.brand { letter-spacing:-1.8px; }
+.brand span { color:var(--coral); }
+.eyebrow { color:#aa624c; font-size:11px; letter-spacing:2.2px; }
+.sparkle { display:inline-block; margin-right:7px; color:var(--coral); font-size:19px; vertical-align:-2px; }
+.wallet,.primary { background:var(--plum); box-shadow:0 7px 0 #d7ae9f; transition:transform .2s,box-shadow .2s,background .2s; }
+.wallet:hover,.primary:hover { background:#65405a; transform:translateY(-2px); box-shadow:0 9px 0 #d7ae9f; }
+.wallet:active,.primary:active { transform:translateY(4px); box-shadow:0 2px 0 #d7ae9f; }
+.walletConnected { color:var(--ink); background:#ffdbc7; }
+.announcement { display:flex; align-items:center; justify-content:center; gap:9px; min-height:34px; padding:7px 16px; color:#fff9ed; background:var(--plum); font-size:10px; font-weight:700; letter-spacing:.8px; text-align:center; }
+.announcementDot { width:7px; height:7px; flex:0 0 auto; border-radius:50%; background:#ffc16b; box-shadow:0 0 0 4px rgba(255,193,107,.16); }
+.homePage { overflow:hidden; }
+.homePage .nav { height:82px; }
+.homePage .navLinks a:not(.wallet) { transition:color .2s; }
+.homePage .navLinks a:not(.wallet):hover { color:var(--coral); }
+.homePage .hero { min-height:690px; grid-template-columns:1.06fr .94fr; gap:25px; padding-block:44px 62px; }
+.homePage .heroCopy { position:relative; z-index:1; }
+.homePage .hero h1 { margin:20px 0 29px; font-size:clamp(55px,6.3vw,88px); line-height:.99; letter-spacing:-5.2px; }
+.homePage .hero h1 em,.dashboardHero h1 em,.how h2 em,.joinBand h2 em,.sectionTitle h2 em { color:var(--coral); font-family:Georgia,serif; font-weight:400; }
+.homePage .lead { max-width:540px; color:#746b6b; font-size:17px; line-height:1.75; }
+.homePage .heroActions { gap:24px; margin-top:35px; }
+.homePage .primary { display:inline-flex; align-items:center; justify-content:space-between; gap:25px; padding:17px 24px; font-size:13px; }
+.homePage .primary span { margin:0; font-size:19px; }
+.heroTextLink { border-bottom:1px solid var(--ink); padding:12px 0 7px; font-size:13px; font-weight:700; }
+.heroTextLink span { margin-left:10px; }
+.heroProof { display:flex; align-items:center; gap:11px; margin-top:66px; color:#867978; font-size:11px; }
+.heroProof b { margin-inline:5px; color:var(--coral); }
+.proofMark { display:grid; place-items:center; width:27px; height:27px; color:var(--coral); border:1px solid #efb09d; border-radius:50%; font-size:15px; }
+.heroArt { position:relative; min-height:565px; overflow:hidden; background:radial-gradient(circle at 54% 48%,#ffd2ab 0 22%,transparent 23%),radial-gradient(circle at 83% 19%,#f6b9a8 0 4%,transparent 5%),#f6d0bd; border-radius:46% 46% 26px 26px; isolation:isolate; }
+.heroArt:before { content:""; position:absolute; z-index:-1; width:440px; height:440px; left:50%; top:50%; border:1px solid rgba(115,57,62,.23); border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 0 70px rgba(255,255,255,.1),0 0 0 145px rgba(255,255,255,.08); }
+.heroArtLabel,.artCounter { position:absolute; z-index:2; left:30px; color:#6f4050; font-size:10px; font-weight:800; letter-spacing:1.6px; }
+.heroArtLabel { top:28px; }.artCounter { bottom:25px; }.artCounter span{margin:0 7px;color:#b47b75}
+.hero3d { position:absolute; inset:0; }
+.hero3d canvas { display:block; width:100%; height:100%; }
+.hero3dFallback { position:absolute; left:50%; top:50%; display:flex; flex-direction:column; justify-content:space-between; width:260px; height:350px; padding:24px; color:var(--ink); background:#ffbd9f; border:8px solid #e7967c; border-radius:25px; box-shadow:20px 22px 45px rgba(80,42,60,.25); transform:translate(-50%,-50%) rotate(-8deg); }
+.hero3dFallback span { font-weight:800; }.hero3dFallback strong{font:800 44px/.98 "Manrope"}.hero3dFallback small{border-top:2px dashed currentColor;padding-top:13px;font-weight:800}
+.hero3d.isReady .hero3dFallback { display:none; }
+.floatNote { position:absolute; z-index:3; right:14px; bottom:76px; display:flex; align-items:center; gap:9px; padding:12px 16px; background:#fff9ee; border:1px solid rgba(74,42,55,.13); border-radius:14px; box-shadow:0 14px 30px rgba(83,43,57,.1); transform:rotate(5deg); }
+.floatNote>span { color:var(--coral); font-size:30px; }.floatNote strong,.floatNote small{display:block}.floatNote strong{font-size:11px}.floatNote small{margin-top:2px;color:#837578;font-size:10px}
+.ticker { overflow:hidden; padding:18px 0; color:#5e3248; background:#ffc184; border-block:1px solid #e6a376; font:700 clamp(17px,2.3vw,27px) "Manrope"; white-space:nowrap; letter-spacing:1px; }
+.ticker div { width:max-content; min-width:100%; text-align:center; }.ticker span{margin:0 25px;color:#fff8e9}
+.campaignSection { padding:95px 0 105px; background:#fff4e6; }
+.sectionTitle { margin-bottom:37px; }.sectionTitle h2 { font-size:clamp(38px,4vw,54px); letter-spacing:-2.8px; }.sectionTitle>div>p:last-child{margin:10px 0 0;color:#817577;font-size:14px}
+.filter { padding:13px 19px; background:#fffaf1; border-color:#e8cbbb; font-size:12px; font-weight:700; }.filter span{margin-left:16px;color:var(--coral)}
+.campaignCard { background:#fffaf3; border:1px solid #ead8cd; border-radius:19px; box-shadow:0 12px 30px rgba(104,61,73,.07); }
+.cardVisual { height:232px; overflow:hidden; color:var(--ink); background:#f4aa8e; }
+.cardVisual.coffee,.marketVisual.coffee{background:#e8b075}.cardVisual.berry,.marketVisual.berry{background:#e8a4ac}.cardVisual.lime,.marketVisual.lime{background:#f0c773}.cardVisual.ocean,.marketVisual.ocean{background:#a7c8c3}
+.cardVisual .cardLocation { z-index:2; top:20px; left:21px; background:#fff9ee; font-weight:700; }
+.cardNumber { position:absolute; z-index:2; top:28px; right:20px; font-size:9px; font-weight:800; letter-spacing:1px; }
+.visualPrice { position:relative; z-index:2; display:flex; align-items:end; }.cardVisual .visualPrice b{font-size:91px}.cardVisual .visualPrice small{margin-bottom:12px}
+.visualArc { position:absolute; right:-50px; bottom:-90px; width:285px; height:285px; border:46px solid rgba(255,250,239,.4); border-radius:50%; }
+.cardCopy { padding:25px; }.cardCopy>p{color:#9b635a;font-weight:800}.cardCopy h3{font-size:22px}.roundLink { background:var(--coral); font-size:18px; }.roundLink:hover{transform:rotate(45deg)}
+.how { display:grid; grid-template-columns:.8fr 1.2fr; gap:70px; padding-block:115px 130px; }.how h2{font-size:clamp(36px,4vw,52px);line-height:1.08}.howIntro>p:last-child{color:#807576;line-height:1.7}.steps{grid-template-columns:repeat(3,1fr);gap:16px;margin:0}.steps>div{min-height:255px;padding:20px 18px;background:#fff2e5;border:1px solid #eedacf;border-radius:16px}.steps span{color:#aa6557;font-weight:800}.stepGlyph{display:grid;place-items:center;width:48px;height:48px;margin:22px 0;color:#fff8ed;background:var(--coral);border-radius:50%;font:600 26px Georgia}.steps h3{font-size:17px;line-height:1.2}.steps p{font-size:12px}
+.joinBand { padding:75px 0 85px; color:#fff5e7; background:var(--plum); }.joinInner{display:grid;grid-template-columns:1fr .55fr;gap:90px;align-items:end}.joinBand .eyebrow{color:#ffc5a9}.joinBand h2{margin:10px 0 0;font:600 clamp(43px,5vw,70px)/1.02 "Manrope";letter-spacing:-4px}.joinBand h2 em{color:#ffb996}.joinBand p:not(.eyebrow){max-width:440px;margin:0 0 25px;color:#e3d3d8;line-height:1.6}.joinBand .primary{background:#ffb895;color:var(--ink);box-shadow:0 7px 0 #b86567}.joinBand .primary:hover{background:#ffd0ad}.homeFooter{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:100px;color:#8b7b7c;font-size:11px}.homeFooter .brand{color:var(--ink)}.homeFooter>a:last-child{font-weight:800;color:var(--coral)}
+
+/* The same warm language across customer and merchant workflows */
+.dashboardPage { background:#fff8ee; }
+.dashboardHeader { background:rgba(255,248,238,.92); border-bottom-color:#ead8cc; }
+.roleSwitch { background:#f4e8df; }.roleSwitch a{color:#826f75}.roleSwitch a.active{background:var(--plum)}
+.dashboardHero { min-height:350px; gap:50px; padding-block:57px 53px; }
+.dashboardHero h1 { max-width:840px; font-size:clamp(44px,5.2vw,70px); line-height:1.03; letter-spacing:-3.7px; }
+.dashboardHero>div>p:last-child { color:#817578; }
+.balanceCard,.verificationCard { position:relative; overflow:hidden; min-height:190px; display:flex; flex-direction:column; justify-content:center; background:#f2ab8b; color:var(--ink); border-radius:22px; box-shadow:12px 13px 0 #e7c9bb; }
+.balanceCard:after,.verificationCard:after { content:"✳"; position:absolute; right:-3px; top:-33px; color:rgba(255,247,226,.42); font-size:150px; line-height:1; }
+.balanceCard span,.verificationCard span{position:relative;z-index:1;color:#664351}.balanceCard strong,.verificationCard strong{position:relative;z-index:1}.balanceCard small,.verificationCard small{position:relative;z-index:1;color:#6e5258}
+.verificationCard{background:#e3c8ad;box-shadow:12px 13px 0 #f0dccc}
+.dashboardContent,.vouchersSection{padding-top:45px}.contentHeading h2,.formHeading h2{font-size:32px;letter-spacing:-1.7px}.headingSpark{color:var(--coral);font-size:25px}
+.contentHeading input,.campaignForm input,.campaignForm textarea,.campaignForm select,.manualCodeForm input{background:#fffdf8;border-color:#e7d8ce}.contentHeading input:focus,.campaignForm input:focus,.campaignForm textarea:focus,.campaignForm select:focus{border-color:var(--coral);box-shadow:0 0 0 3px rgba(239,112,78,.13)}
+.marketCard,.campaignForm,.merchantCampaigns{background:#fffcf7;border:1px solid #ecded3;box-shadow:0 10px 30px rgba(100,60,72,.05)}.marketCard{transition:transform .25s,box-shadow .25s}.marketCard:hover{transform:translateY(-4px);box-shadow:0 18px 34px rgba(100,60,72,.12)}.marketVisual{position:relative;overflow:hidden;height:185px}.marketVisual:after{content:"";position:absolute;right:-54px;bottom:-103px;width:275px;height:275px;border:43px solid rgba(255,250,239,.36);border-radius:50%}.marketVisual>span,.marketVisual>div{position:relative;z-index:2}.marketVisual>span{background:#fff9ed;font-weight:700}.marketVisual i{position:absolute;right:25px;top:10px;color:rgba(255,250,239,.76);font-size:57px;font-style:normal}.marketCopy>p:first-child{color:#a56659}.marketCopy .description,.stockLine{color:#82757a}
+.actionButton{background:var(--plum);border-radius:10px}.actionButton:hover{background:#65405a}.secondaryButton{border-color:#dec8bd}.secondaryButton:hover{background:#fff0e4}.emptyState{color:#826f77;background:#fffaf4;border-color:#e3c7b8}.voucherRow,.metricGrid>div,.managementCard,.detailInfoGrid article{background:#fffcf7;border:1px solid #eedfd5}.voucherRow:hover{border-color:#e9a48e}.voucherCode{background:#fff0e3}.statusPill{color:#7e493a;background:#ffe0cd}.feePreview{background:#fff0e0}.metricGrid>div{position:relative;overflow:hidden;border-radius:16px}.metricGrid>div:after{content:"✳";position:absolute;right:10px;bottom:-36px;color:#f5e2d5;font-size:100px}.metricGrid strong{position:relative;z-index:1}.onboardingCard{background:var(--plum)}.onboardingCard .actionButton{background:#ffbd9f;color:var(--ink)}.demoBanner{background:rgba(72,43,67,.96)}.walletMenu{background:#fffaf3;border-color:#ead8cc}.walletMenu>a:hover,.walletMenu>button:hover{background:#fff0e4}.voucherPassCode,.adminMetric{background:var(--plum)}.shareGlyph{background:var(--coral)}
+@media(max-width:1050px){.how{grid-template-columns:1fr;gap:35px}.homePage .hero{gap:10px}.homePage .hero h1{font-size:clamp(52px,6vw,75px)}.steps{gap:12px}}
+@media(max-width:800px){.homePage .hero{grid-template-columns:1fr;gap:30px}.heroArt{min-height:520px;border-radius:38% 38% 22px 22px}.heroProof{margin-top:35px}.joinInner{grid-template-columns:1fr;gap:30px}.homePage .navLinks>a:not(.wallet){display:none}}
+@media(max-width:620px){.announcement{font-size:9px}.homePage .nav{height:70px}.homePage .hero{padding-block:45px}.homePage .hero h1{font-size:clamp(48px,12vw,69px);letter-spacing:-3.5px}.homePage .lead{font-size:15px}.homePage .heroActions{align-items:flex-start;gap:20px}.heroArt{min-height:420px}.hero3dFallback{width:210px;height:285px}.hero3dFallback strong{font-size:36px}.floatNote{right:8px;bottom:54px}.campaignSection{padding:70px 0}.how{padding-block:75px}.steps{grid-template-columns:1fr}.steps>div{min-height:0}.joinBand h2{letter-spacing:-2px}.homeFooter{align-items:flex-start;flex-direction:column;justify-content:center;padding-block:24px}.dashboardHero{padding-block:42px}.dashboardHero h1{font-size:43px;letter-spacing:-2.5px}.balanceCard,.verificationCard{min-height:155px}.contentHeading h2{font-size:28px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.wallet,.primary,.marketCard,.campaignCard{transition:none}.wallet:hover,.primary:hover,.marketCard:hover,.campaignCard:hover{transform:none}}
