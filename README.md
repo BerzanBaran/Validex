@@ -58,6 +58,8 @@ Validex hiçbir kullanıcı veya işletme private key/seed phrase bilgisini alma
 
 Kampanya listesi ve cüzdana ait kuponlar API/PostgreSQL'den yüklenir; `localStorage` bu kayıtlar için kullanılmaz. İşletme kampanyayı cüzdanıyla zincirde oluşturup API'ye doğrulatır. Müşteri `purchase-intent` API'sinden bekleyen kuponu alır, sonra Solflare/Phantom ile USDC'yi kampanya escrow kasasına gönderir. Kupon yalnızca zincir hesabı ve işlem imzası `finalized` düzeyinde doğrulanıp API kaydı aktifleşince kullanılabilir. Sayfa kapanırsa bekleyen kuponun zincir durumu tekrar kontrol edilerek API kaydı kurtarılır; ödeme otomatik olarak yeniden gönderilmez. Devnet kurulumu tamamlanana kadar zincir işlem düğmeleri kapalıdır.
 
+İşlem takipçisi `getSignatureStatuses` ile `pending`/`confirmed`/`finalized`/`failed` durumlarını okur. Kimlik doğrulanmış kullanıcı `GET /api/v1/transactions/{signature}/status` adresinden ağ durumunu sorgulayabilir. Finansal kayıtlar yalnızca `finalized` işlem gövdesi (`getTransaction`) beklenen Validex talimatı, imzalayanlar, hesaplar, USDC mint'i, token programı ve tam transfer tutarıyla eşleşirse güncellenir. İşlem imzaları PostgreSQL'de benzersizdir; aynı imza farklı kupon veya kampanya için kullanılamaz. Bu doğrulama RPC kanıtına dayanır; gerçek devnet testi, program ve mint adresleri girilmeden yapılamaz.
+
 ## Cüzdanla giriş
 
 Paneldeki Solflare ve Phantom bağlantıları artık adres sahipliğini mesaj imzasıyla doğrular. Solflare, Colosseum demosu için birincil cüzdandır:

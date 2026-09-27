@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import struct
+from dataclasses import dataclass
 
 import base58
 import httpx
@@ -12,6 +13,58 @@ from app.core.config import get_settings
 
 class ChainVerificationError(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class CampaignChainContext:
+    merchant: str
+    authority: str
+    platform: str
+    treasury: str
+    mint: str
+    token_program: str
+
+
+def encoded_key(data: bytes) -> str:
+    return base58.b58encode(data).decode("ascii")
+
+
+async def campaign_context(address: str) -> CampaignChainContext:
+    campaign = await account_data(address)
+    if len(campaign) < 180 or campaign[:8] != discriminator("Campaign"):
+        raise ChainVerificationError("On-chain campaign account is invalid")
+    merchant_address = encoded_key(campaign[8:40])
+    merchant = await account_data(merchant_address)
+    if (
+        len(merchant) < 81
+        or merchant[:8] != discriminator("Merchant")
+        or merchant[8:40] != campaign[40:72]
+        or merchant[40:72] != campaign[72:104]
+    ):
+        raise ChainVerificationError("Campaign merchant account differs")
+    platform_address = encoded_key(campaign[72:104])
+    platform = await account_data(platform_address)
+    if len(platform) < 139 or platform[:8] != discriminator("Platform"):
+        raise ChainVerificationError("On-chain platform account is invalid")
+    mint = encoded_key(platform[72:104])
+    if mint != get_settings().usdc_mint:
+        raise ChainVerificationError("Platform USDC mint does not match")
+    token_program = encoded_key(platform[104:136])
+    if token_program not in (
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    ):
+        raise ChainVerificationError("Unsupported platform token program")
+    if struct.unpack_from("<H", platform, 136)[0] != 200:
+        raise ChainVerificationError("Unexpected platform commission")
+    return CampaignChainContext(
+        merchant=merchant_address,
+        authority=encoded_key(campaign[40:72]),
+        platform=platform_address,
+        treasury=encoded_key(platform[40:72]),
+        mint=mint,
+        token_program=token_program,
+    )
 
 
 def public_key_bytes(value: str) -> bytes:
@@ -111,6 +164,7 @@ async def verify_voucher(
     buyer_wallet: str,
     voucher_hash: bytes,
     expected_status: int,
+    expected_price_minor: int | None = None,
 ) -> None:
     voucher = await account_data(address)
     if len(voucher) < 130 or voucher[:8] != discriminator("Voucher"):
@@ -120,6 +174,10 @@ async def verify_voucher(
         or voucher[40:72] != public_key_bytes(buyer_wallet)
         or voucher[72:104] != voucher_hash
         or voucher[128] != expected_status
+        or (
+            expected_price_minor is not None
+            and struct.unpack_from("<Q", voucher, 104)[0] != expected_price_minor
+        )
     ):
         raise ChainVerificationError("Voucher state differs from on-chain state")
 
@@ -133,31 +191,3 @@ async def verify_cancelled_campaign(address: str, merchant_wallet: str) -> None:
         or campaign[178] != 1
     ):
         raise ChainVerificationError("Campaign is not cancelled on-chain")
-
-
-async def verify_account_signature(address: str, signature: str) -> None:
-    public_key_bytes(address)
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.post(
-                get_settings().solana_rpc_url,
-                json={
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "getSignaturesForAddress",
-                    "params": [address, {"limit": 10, "commitment": "finalized"}],
-                },
-            )
-            response.raise_for_status()
-            body = response.json()
-    except (httpx.HTTPError, ValueError) as error:
-        raise ChainVerificationError("Transaction signature could not be checked") from error
-    recent = body.get("result")
-    if (
-        not isinstance(recent, list)
-        or not recent
-        or not isinstance(recent[0], dict)
-        or recent[0].get("signature") != signature
-        or recent[0].get("err") is not None
-    ):
-        raise ChainVerificationError("Transaction signature is not confirmed for this account")

@@ -5,10 +5,13 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import CurrentUserDep, SessionDep
 from app.core.config import get_settings
-from app.domain.solana_chain import ChainVerificationError, verify_account_signature, verify_voucher
+from app.domain.solana_chain import ChainVerificationError, campaign_context, verify_voucher
+from app.domain.transaction_proofs import purchase_proof, redeem_proof, refund_proof
+from app.domain.transaction_tracker import verify_transaction
 from app.domain.vouchers import (
     DomainRuleViolation,
     assert_campaign_purchasable,
@@ -37,6 +40,49 @@ from app.schemas.vouchers import (
 router = APIRouter(prefix="/vouchers", tags=["vouchers"])
 settings = get_settings()
 PENDING_RESERVATION_MINUTES = 15
+
+
+async def assert_signature_available(
+    session: SessionDep,
+    signature: str,
+    *,
+    action: str,
+    voucher_id: uuid.UUID,
+    allow_same: bool = False,
+) -> None:
+    existing = await session.scalar(select(Transaction).where(Transaction.signature == signature))
+    if existing is None:
+        legacy_campaign = await session.scalar(
+            select(Campaign).where(Campaign.transaction_signature == signature)
+        )
+        if legacy_campaign is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Transaction signature has already been used",
+            )
+        if allow_same:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Voucher state has no matching transaction record",
+            )
+        return
+    if allow_same and existing.type == action and existing.voucher_id == voucher_id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Transaction signature has already been used",
+    )
+
+
+async def commit_verified_transaction(session: SessionDep) -> None:
+    try:
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Transaction signature has already been used",
+        ) from error
 
 
 def voucher_response(
@@ -166,6 +212,13 @@ async def confirm_purchase(
         voucher.status == VoucherStatus.ACTIVE
         and voucher.onchain_address == payload.onchain_address
     ):
+        await assert_signature_available(
+            session,
+            payload.transaction_signature,
+            action="purchase",
+            voucher_id=voucher.id,
+            allow_same=True,
+        )
         return voucher_response(voucher)
     if voucher.status != VoucherStatus.PENDING_CHAIN:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Voucher is not pending")
@@ -176,6 +229,12 @@ async def confirm_purchase(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Campaign has no on-chain account"
         )
+    await assert_signature_available(
+        session,
+        payload.transaction_signature,
+        action="purchase",
+        voucher_id=voucher.id,
+    )
     try:
         await verify_voucher(
             address=payload.onchain_address,
@@ -183,8 +242,20 @@ async def confirm_purchase(
             buyer_wallet=current_user.wallet_address,
             voucher_hash=voucher.voucher_hash,
             expected_status=0,
+            expected_price_minor=campaign.price_minor,
         )
-        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+        context = await campaign_context(campaign.onchain_address)
+        await verify_transaction(
+            payload.transaction_signature,
+            purchase_proof(
+                context,
+                buyer=current_user.wallet_address,
+                campaign=campaign.onchain_address,
+                voucher=payload.onchain_address,
+                voucher_hash=voucher.voucher_hash,
+                price_minor=campaign.price_minor,
+            ),
+        )
     except ChainVerificationError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     voucher.onchain_address = payload.onchain_address
@@ -199,7 +270,7 @@ async def confirm_purchase(
             campaign_id=campaign.id,
             voucher_id=voucher.id,
             gross_amount=campaign.price_minor,
-            status=TransactionStatus.CONFIRMED,
+            status=TransactionStatus.FINALIZED,
             confirmed_at=datetime.now(UTC),
         )
     )
@@ -211,7 +282,7 @@ async def confirm_purchase(
             entity_id=str(voucher.id),
         )
     )
-    await session.commit()
+    await commit_verified_transaction(session)
     await session.refresh(voucher)
     return voucher_response(voucher)
 
@@ -232,6 +303,13 @@ async def confirm_redemption(
         voucher.status == VoucherStatus.REDEEMED
         and voucher.onchain_address == payload.onchain_address
     ):
+        await assert_signature_available(
+            session,
+            payload.transaction_signature,
+            action="redeem",
+            voucher_id=voucher.id,
+            allow_same=True,
+        )
         return voucher_response(voucher)
     if voucher.status != VoucherStatus.ACTIVE or voucher.onchain_address != payload.onchain_address:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Voucher is not active")
@@ -240,6 +318,12 @@ async def confirm_redemption(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Campaign has no on-chain account"
         )
+    await assert_signature_available(
+        session,
+        payload.transaction_signature,
+        action="redeem",
+        voucher_id=voucher.id,
+    )
     try:
         await verify_voucher(
             address=payload.onchain_address,
@@ -247,8 +331,19 @@ async def confirm_redemption(
             buyer_wallet=current_user.wallet_address,
             voucher_hash=voucher.voucher_hash,
             expected_status=1,
+            expected_price_minor=campaign.price_minor,
         )
-        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+        context = await campaign_context(campaign.onchain_address)
+        await verify_transaction(
+            payload.transaction_signature,
+            redeem_proof(
+                context,
+                buyer=current_user.wallet_address,
+                campaign=campaign.onchain_address,
+                voucher=payload.onchain_address,
+                price_minor=campaign.price_minor,
+            ),
+        )
     except ChainVerificationError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     split = calculate_payment_split(campaign.price_minor, 200)
@@ -264,11 +359,11 @@ async def confirm_redemption(
             gross_amount=split.gross_amount,
             commission_amount=split.commission_amount,
             merchant_amount=split.merchant_amount,
-            status=TransactionStatus.CONFIRMED,
+            status=TransactionStatus.FINALIZED,
             confirmed_at=datetime.now(UTC),
         )
     )
-    await session.commit()
+    await commit_verified_transaction(session)
     await session.refresh(voucher)
     return voucher_response(voucher)
 
@@ -289,6 +384,13 @@ async def confirm_refund(
         voucher.status == VoucherStatus.REFUNDED
         and voucher.onchain_address == payload.onchain_address
     ):
+        await assert_signature_available(
+            session,
+            payload.transaction_signature,
+            action="refund",
+            voucher_id=voucher.id,
+            allow_same=True,
+        )
         return voucher_response(voucher)
     if voucher.status != VoucherStatus.ACTIVE or voucher.onchain_address != payload.onchain_address:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Voucher is not active")
@@ -297,6 +399,12 @@ async def confirm_refund(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Campaign has no on-chain account"
         )
+    await assert_signature_available(
+        session,
+        payload.transaction_signature,
+        action="refund",
+        voucher_id=voucher.id,
+    )
     try:
         await verify_voucher(
             address=payload.onchain_address,
@@ -304,8 +412,19 @@ async def confirm_refund(
             buyer_wallet=current_user.wallet_address,
             voucher_hash=voucher.voucher_hash,
             expected_status=2,
+            expected_price_minor=campaign.price_minor,
         )
-        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+        context = await campaign_context(campaign.onchain_address)
+        await verify_transaction(
+            payload.transaction_signature,
+            refund_proof(
+                context,
+                buyer=current_user.wallet_address,
+                campaign=campaign.onchain_address,
+                voucher=payload.onchain_address,
+                price_minor=campaign.price_minor,
+            ),
+        )
     except ChainVerificationError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     voucher.status = VoucherStatus.REFUNDED
@@ -317,11 +436,11 @@ async def confirm_refund(
             campaign_id=campaign.id,
             voucher_id=voucher.id,
             gross_amount=campaign.price_minor,
-            status=TransactionStatus.CONFIRMED,
+            status=TransactionStatus.FINALIZED,
             confirmed_at=datetime.now(UTC),
         )
     )
-    await session.commit()
+    await commit_verified_transaction(session)
     await session.refresh(voucher)
     return voucher_response(voucher)
 

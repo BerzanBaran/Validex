@@ -1,19 +1,30 @@
 import hashlib
 import json
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import MerchantUserDep, SessionDep
 from app.domain.solana_chain import (
     ChainVerificationError,
-    verify_account_signature,
+    campaign_context,
     verify_campaign,
     verify_cancelled_campaign,
 )
-from app.models.entities import Campaign, CampaignStatus, Merchant, VerificationStatus
+from app.domain.transaction_proofs import cancel_campaign_proof, create_campaign_proof
+from app.domain.transaction_tracker import verify_transaction
+from app.models.entities import (
+    Campaign,
+    CampaignStatus,
+    Merchant,
+    Transaction,
+    TransactionStatus,
+    VerificationStatus,
+)
 from app.schemas.campaigns import (
     CampaignCancellation,
     CampaignCreate,
@@ -86,6 +97,24 @@ async def create_onchain_campaign(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Verified merchant required"
         )
+    prior = await session.scalar(
+        select(Transaction).where(Transaction.signature == payload.transaction_signature)
+    )
+    if prior is not None:
+        if prior.type == "create_campaign" and prior.campaign_id:
+            campaign = await session.get(Campaign, prior.campaign_id)
+            if (
+                campaign is not None
+                and campaign.onchain_address == payload.onchain_address
+                and campaign.merchant_id == merchant.id
+            ):
+                return campaign_read(campaign, merchant)
+        raise HTTPException(status_code=409, detail="Transaction signature has already been used")
+    legacy = await session.scalar(
+        select(Campaign).where(Campaign.transaction_signature == payload.transaction_signature)
+    )
+    if legacy is not None:
+        raise HTTPException(status_code=409, detail="Transaction signature has already been used")
     try:
         metadata = [
             current_user.wallet_address,
@@ -111,12 +140,46 @@ async def create_onchain_campaign(
             expires_at=int(payload.expires_at.timestamp()),
             metadata_hash=metadata_hash,
         )
-        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+        context = await campaign_context(payload.onchain_address)
+        if context.authority != current_user.wallet_address:
+            raise ChainVerificationError("Campaign authority differs from authenticated wallet")
+        await verify_transaction(
+            payload.transaction_signature,
+            create_campaign_proof(
+                context,
+                campaign_address=payload.onchain_address,
+                campaign_id=payload.external_id,
+                metadata_hash=metadata_hash,
+                price_minor=payload.price_minor,
+                stock=payload.stock,
+                per_user_limit=payload.per_user_limit,
+                starts_at=int(payload.starts_at.timestamp()),
+                expires_at=int(payload.expires_at.timestamp()),
+            ),
+        )
     except ChainVerificationError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     campaign = Campaign(**payload.model_dump(), status=CampaignStatus.PUBLISHED)
     session.add(campaign)
-    await session.commit()
+    try:
+        await session.flush()
+        session.add(
+            Transaction(
+                signature=payload.transaction_signature,
+                type="create_campaign",
+                user_id=current_user.id,
+                merchant_id=merchant.id,
+                campaign_id=campaign.id,
+                status=TransactionStatus.FINALIZED,
+                confirmed_at=datetime.now(UTC),
+            )
+        )
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="Transaction signature has already been used"
+        ) from error
     await session.refresh(campaign)
     return campaign_read(campaign, merchant)
 
@@ -138,13 +201,49 @@ async def confirm_campaign_cancellation(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Campaign not owned by wallet"
         )
+    prior = await session.scalar(
+        select(Transaction).where(Transaction.signature == payload.transaction_signature)
+    )
+    if prior is not None:
+        if (
+            prior.type == "cancel_campaign"
+            and prior.campaign_id == campaign.id
+            and campaign.status == CampaignStatus.CANCELLED
+        ):
+            return campaign_read(campaign, merchant)
+        raise HTTPException(status_code=409, detail="Transaction signature has already been used")
+    if campaign.status == CampaignStatus.CANCELLED:
+        raise HTTPException(status_code=409, detail="Campaign is already cancelled")
     try:
         await verify_cancelled_campaign(campaign.onchain_address, current_user.wallet_address)
-        await verify_account_signature(campaign.onchain_address, payload.transaction_signature)
+        context = await campaign_context(campaign.onchain_address)
+        if context.authority != current_user.wallet_address:
+            raise ChainVerificationError("Campaign authority differs from authenticated wallet")
+        await verify_transaction(
+            payload.transaction_signature,
+            cancel_campaign_proof(context, campaign.onchain_address),
+        )
     except ChainVerificationError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     campaign.status = CampaignStatus.CANCELLED
-    await session.commit()
+    session.add(
+        Transaction(
+            signature=payload.transaction_signature,
+            type="cancel_campaign",
+            user_id=current_user.id,
+            merchant_id=merchant.id,
+            campaign_id=campaign.id,
+            status=TransactionStatus.FINALIZED,
+            confirmed_at=datetime.now(UTC),
+        )
+    )
+    try:
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409, detail="Transaction signature has already been used"
+        ) from error
     await session.refresh(campaign)
     return campaign_read(campaign, merchant)
 

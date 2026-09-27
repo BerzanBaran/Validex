@@ -142,7 +142,9 @@ export function useMarketplace() {
     }
   }, []);
 
-  const purchaseCampaign = useCallback(async (campaignId: string, ownerWallet: string) => {
+  const purchaseCampaign = useCallback(async (
+    campaignId: string, ownerWallet: string, onSubmitted?: (signature: string) => void,
+  ) => {
     if (!chainConfigured()) throw new Error("Zincir ödemesi kurulmadan USDC tahsil edilmez.");
     const campaign = await getOnchainCampaign(campaignId);
     if (campaign.status !== "published" || !campaign.chainCampaign ||
@@ -176,7 +178,7 @@ export function useMarketplace() {
     if (priceMinor !== usdcMinor(campaign.priceUsdc)) {
       throw new Error("API fiyatı zincirdeki kampanya fiyatıyla eşleşmiyor. Ödeme durduruldu.");
     }
-    const signature = await sendWalletTransaction(config, ownerWallet, instruction, address);
+    const signature = await sendWalletTransaction(config, ownerWallet, instruction, address, onSubmitted);
     const confirmed = await confirmVoucherPurchase(intent.id, ownerWallet, address.toBase58(), signature);
     const voucher = voucherFromApi(confirmed, ownerWallet, campaign);
     setVouchers((current) => [voucher, ...current.filter((item) => item.id !== voucher.id)]);

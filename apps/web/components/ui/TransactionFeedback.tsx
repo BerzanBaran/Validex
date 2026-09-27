@@ -1,8 +1,8 @@
 export type TransactionPhase = "idle" | "preparing" | "confirmed" | "failed";
 
 const LABELS: Record<Exclude<TransactionPhase, "idle">, { title: string; detail: string }> = {
-  preparing: { title: "Kupon hazırlanıyor", detail: "Demo kaydı oluşturuluyor ve stok kontrol ediliyor." },
-  confirmed: { title: "Kupon hazır", detail: "Kupon cüzdanınıza eklendi. QR kodunu kullanabilirsiniz." },
+  preparing: { title: "Zincir işlemi izleniyor", detail: "USDC ödemesi ve API doğrulaması bekleniyor." },
+  confirmed: { title: "Kupon hazır", detail: "Zincir ve API doğrulaması tamamlandı. QR kodunu kullanabilirsiniz." },
   failed: { title: "İşlem tamamlanamadı", detail: "Bilgileri kontrol edip yeniden deneyin." },
 };
 

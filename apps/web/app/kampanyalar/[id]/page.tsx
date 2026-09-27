@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DashboardHeader } from "../../../components/DashboardHeader";
 import { CapacityMeter } from "../../../components/ui/CapacityMeter";
@@ -10,6 +10,7 @@ import { ShareDialog } from "../../../components/ui/ShareDialog";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { TransactionFeedback, TransactionPhase } from "../../../components/ui/TransactionFeedback";
 import { useMarketplace } from "../../../lib/marketplace";
+import { ChainTransactionStatus, getTransactionStatus } from "../../../lib/transactionApi";
 import { chainConfigured } from "../../../lib/validexChain";
 
 export default function CampaignDetailPage() {
@@ -19,8 +20,28 @@ export default function CampaignDetailPage() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [phase, setPhase] = useState<TransactionPhase>("idle");
   const [message, setMessage] = useState<string>();
+  const [signature, setSignature] = useState<string | null>(null);
+  const [chainStatus, setChainStatus] = useState<ChainTransactionStatus | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const campaign = useMemo(() => marketplace.campaigns.find((item) => item.id === id), [id, marketplace.campaigns]);
+
+  useEffect(() => {
+    if (!signature || !walletAddress) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      try {
+        const status = await getTransactionStatus(signature!, walletAddress!);
+        if (cancelled) return;
+        setChainStatus(status);
+        if (status === "pending" || status === "confirmed") timer = setTimeout(() => void poll(), 3000);
+      } catch {
+        if (!cancelled) timer = setTimeout(() => void poll(), 5000);
+      }
+    }
+    void poll();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [signature, walletAddress]);
 
   async function purchase() {
     if (!walletAddress) {
@@ -30,8 +51,10 @@ export default function CampaignDetailPage() {
     }
     setPhase("preparing");
     setMessage(undefined);
+    setSignature(null);
+    setChainStatus(null);
     try {
-      const voucher = await marketplace.purchaseCampaign(id, walletAddress);
+      const voucher = await marketplace.purchaseCampaign(id, walletAddress, setSignature);
       setPhase("confirmed");
       window.setTimeout(() => router.push(`/musteri/kuponlar/${voucher.id}`), 650);
     } catch (error) {
@@ -66,6 +89,7 @@ export default function CampaignDetailPage() {
           <div className="pricePanel"><div><strong>{campaign.priceUsdc}</strong><span>USDC</span></div><p><s>{campaign.originalValueUsdc} USDC</s><br />Kupon başına fiyat</p></div>
           <CapacityMeter sold={campaign.sold} stock={campaign.stock} />
           <TransactionFeedback phase={phase} message={message} />
+          {signature ? <p className="chainDisclosure" role="status">İşlem imzası: {signature}<br />Ağ durumu: {chainStatus === "confirmed" ? "confirmed — kesinleşme bekleniyor" : chainStatus === "finalized" ? "finalized" : chainStatus === "failed" ? "başarısız" : "bekleniyor"}</p> : null}
           <button className="actionButton detailPurchase" disabled={!available || phase === "preparing"} onClick={() => void purchase()} type="button">
             {phase === "preparing" ? "Cüzdan onayı bekleniyor…" : available ? "USDC ile satın al" : "Zincir ödemesi henüz kapalı"}
           </button>
