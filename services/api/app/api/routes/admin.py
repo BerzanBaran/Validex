@@ -6,10 +6,40 @@ from sqlalchemy import select
 
 from app.api.dependencies import AdminUserDep, SessionDep
 from app.models.entities import AuditLog, Merchant, User, UserRole, VerificationStatus
+from app.schemas.audit import AuditEventRead
 from app.schemas.merchants import MerchantDecision, MerchantRead
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 VerificationQuery = Annotated[VerificationStatus | None, Query(alias="status")]
+
+
+@router.get("/audit", response_model=list[AuditEventRead])
+async def list_audit_events(
+    session: SessionDep,
+    _: AdminUserDep,
+    suspicious_only: bool = False,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[AuditEventRead]:
+    query = (
+        select(AuditLog, User.wallet_address)
+        .outerjoin(User, AuditLog.actor_id == User.id)
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .limit(limit)
+    )
+    if suspicious_only:
+        query = query.where(AuditLog.action.like("security.%"))
+    result = await session.execute(query)
+    return [
+        AuditEventRead(
+            id=event.id,
+            action=event.action,
+            actor_wallet=wallet,
+            entity_type=event.entity_type,
+            entity_id=event.entity_id,
+            created_at=event.created_at,
+        )
+        for event, wallet in result.all()
+    ]
 
 
 @router.get("/merchants", response_model=list[MerchantRead])

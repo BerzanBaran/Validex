@@ -5,6 +5,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     Enum,
     ForeignKey,
@@ -97,6 +98,18 @@ class Merchant(TimestampMixin, Base):
     verification_status: Mapped[VerificationStatus] = mapped_column(
         Enum(VerificationStatus), default=VerificationStatus.PENDING
     )
+
+
+class MerchantStaff(TimestampMixin, Base):
+    __tablename__ = "merchant_staff"
+    __table_args__ = (
+        UniqueConstraint("merchant_id", "wallet_address", name="uq_merchant_staff_wallet"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    merchant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("merchants.id"), index=True)
+    wallet_address: Mapped[str] = mapped_column(String(44), index=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class Campaign(TimestampMixin, Base):

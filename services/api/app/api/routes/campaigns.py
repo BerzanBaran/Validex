@@ -18,6 +18,7 @@ from app.domain.solana_chain import (
 from app.domain.transaction_proofs import cancel_campaign_proof, create_campaign_proof
 from app.domain.transaction_tracker import verify_transaction
 from app.models.entities import (
+    AuditLog,
     Campaign,
     CampaignStatus,
     Merchant,
@@ -158,6 +159,15 @@ async def create_onchain_campaign(
             ),
         )
     except ChainVerificationError as error:
+        session.add(
+            AuditLog(
+                actor_id=current_user.id,
+                action="security.transaction_rejected",
+                entity_type="campaign",
+                entity_id=payload.onchain_address,
+            )
+        )
+        await session.commit()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     campaign = Campaign(**payload.model_dump(), status=CampaignStatus.PUBLISHED)
     session.add(campaign)
@@ -224,6 +234,15 @@ async def confirm_campaign_cancellation(
             cancel_campaign_proof(context, campaign.onchain_address),
         )
     except ChainVerificationError as error:
+        session.add(
+            AuditLog(
+                actor_id=current_user.id,
+                action="security.transaction_rejected",
+                entity_type="campaign",
+                entity_id=str(campaign.id),
+            )
+        )
+        await session.commit()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     campaign.status = CampaignStatus.CANCELLED
     session.add(
@@ -235,6 +254,14 @@ async def confirm_campaign_cancellation(
             campaign_id=campaign.id,
             status=TransactionStatus.FINALIZED,
             confirmed_at=datetime.now(UTC),
+        )
+    )
+    session.add(
+        AuditLog(
+            actor_id=current_user.id,
+            action="campaign.cancelled",
+            entity_type="campaign",
+            entity_id=str(campaign.id),
         )
     )
     try:

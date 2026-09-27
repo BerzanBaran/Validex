@@ -98,10 +98,12 @@ Dağıtımdan sonra aynı program ID, RPC ve mint değerlerini web (`NEXT_PUBLIC
 
 ## İşletme ve yönetici akışı
 
-İşletme cüzdanı `/isletme` ekranından başvuru oluşturur. Başvuru kişisel işletme bilgilerini zincire yazmadan PostgreSQL'de `pending` durumunda saklar. `VALIDEX_ADMIN_WALLETS` içinde tanımlı bir cüzdan `/yonetim` ekranından başvuruyu onayladığında kullanıcı `merchant` rolüne geçirilir. Rol değişikliğinden sonra yeni yetkiyi içeren oturum için cüzdan bağlantısı yenilenmelidir.
+İşletme cüzdanı `/isletme` ekranından başvuru oluşturur. Başvuru kişisel işletme bilgilerini zincire yazmadan PostgreSQL'de `pending` durumunda saklar. `VALIDEX_ADMIN_WALLET` içinde tanımlı tek public key `/yonetim` ekranından başvuruyu onayladığında kullanıcı `merchant` rolüne geçirilir. Alan boşsa yönetici işlemleri kapalıdır. Rol değişikliğinden sonra yeni yetkiyi içeren oturum için cüzdan bağlantısı yenilenmelidir.
 
 ```env
-VALIDEX_ADMIN_WALLETS=["YONETICI_SOLANA_CUZDAN_ADRESI"]
+VALIDEX_ADMIN_WALLET=YONETICI_SOLANA_PUBLIC_KEY
 ```
 
 Kupon satın alma hazırlığı `POST /api/v1/vouchers/purchase-intent` ile 256-bit rastgele bir sır üretir. Sırrın SHA-256 özeti zincir işlemi için döndürülür; asıl sır sunucuda şifreli saklanır ve kupon `pending_chain` durumunda kalır. Anchor işlemi kesinleşmeden kupon aktif olmaz.
+
+Onaylı işletme sahibi, `/isletme` ekranından çalışan public key'lerine QR doğrulama yetkisi verip geri alabilir. Çalışan cüzdanı yalnızca kuponun API ve zincirde geçerli olduğunu sorgular; kupon kullanımı için işletme sahibi ve müşteri imzaları zorunlu kalır. Yönetim ekranında şüpheli QR denemeleri ve denetim kayıtları gösterilir. API giriş ve tarama uçları dakika başına sınırlandırılmıştır; mevcut sınırlayıcı tek API süreci için geçerlidir. Birden fazla sunucuya çıkmadan önce ortak bir dağıtık limit deposu gerekir.

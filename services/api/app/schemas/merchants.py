@@ -33,3 +33,27 @@ class MerchantRead(BaseModel):
 class MerchantDecision(BaseModel):
     approved: bool
     reason: str = Field(default="", max_length=500)
+
+
+class StaffGrant(BaseModel):
+    wallet_address: str = Field(min_length=32, max_length=44)
+
+
+class StaffRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    merchant_id: uuid.UUID
+    wallet_address: str
+    active: bool
+    created_at: datetime
+
+
+class StaffCampaignRead(BaseModel):
+    campaign_id: uuid.UUID
+    title: str
+    merchant_name: str
+
+
+class CampaignScanAccess(BaseModel):
+    role: str | None

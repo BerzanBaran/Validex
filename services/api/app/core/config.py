@@ -1,6 +1,7 @@
 from functools import lru_cache
 
-from pydantic import Field, model_validator
+import base58
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
         min_length=32,
     )
     jwt_issuer: str = "validex-api"
-    admin_wallets: list[str] = Field(default_factory=list)
+    admin_wallet: str = ""
     solana_rpc_url: str = "https://api.devnet.solana.com"
     solana_program_id: str = ""
     usdc_mint: str = ""
@@ -31,6 +32,18 @@ class Settings(BaseSettings):
         default="dev-only-voucher-encryption-secret-change-me",
         min_length=32,
     )
+
+    @field_validator("admin_wallet")
+    @classmethod
+    def validate_admin_wallet(cls, value: str) -> str:
+        if not value:
+            return value
+        try:
+            if len(base58.b58decode(value)) != 32:
+                raise ValueError("VALIDEX_ADMIN_WALLET must be a Solana public key")
+        except ValueError as error:
+            raise ValueError("VALIDEX_ADMIN_WALLET must be a Solana public key") from error
+        return value
 
     @model_validator(mode="after")
     def reject_development_secret_in_production(self) -> "Settings":

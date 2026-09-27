@@ -22,6 +22,8 @@ Kupon sırrı API tarafından oluşturulur ve veritabanında şifreli tutulur. Z
 
 Program henüz dağıtılmadı. Yönetici açık adresi, gerçek program anahtarı ve devnet USDC mint adresi belirlenmeden ödeme arayüzü kapalıdır. `cargo test` validator entegrasyon testi yerine geçmez; devnet kullanımı öncesi SBF derlemesi ve alım/kullanım/iade uçtan uca testleri gerekir.
 
+`initialize_platform` yöneticisi derleme sırasında `VALIDEX_ADMIN_WALLET` ortam değişkeninden programa sabitlenir. Boş veya geçersiz public key ile platform kurulumu reddedilir. `.env` dosyasının varlığı tek başına Anchor derleme ortamına değişkeni aktarmaz; gerçek devnet derlemesinden önce aynı adresi shell ortamında açıkça sağlayın. Private key veya seed phrase kullanmayın.
+
 ## Yerel kontroller
 
 ```bash

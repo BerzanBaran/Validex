@@ -15,8 +15,12 @@ use state::*;
 
 declare_id!("F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe");
 
-// Fail closed until the project's actual admin public key is provided.
-const ADMIN_PUBKEY: Pubkey = Pubkey::new_from_array([0; 32]);
+// Embedded at build time. A missing or invalid address disables initialization.
+fn configured_admin() -> Result<Pubkey> {
+    let address = option_env!("VALIDEX_ADMIN_WALLET")
+        .ok_or(ValidexError::UnauthorizedAdmin)?;
+    address.parse().map_err(|_| error!(ValidexError::UnauthorizedAdmin))
+}
 
 #[program]
 pub mod validex {
@@ -25,7 +29,7 @@ pub mod validex {
     pub fn initialize_platform(ctx: Context<InitializePlatform>) -> Result<()> {
         require_keys_eq!(
             ctx.accounts.admin.key(),
-            ADMIN_PUBKEY,
+            configured_admin()?,
             ValidexError::UnauthorizedAdmin
         );
         require_eq!(

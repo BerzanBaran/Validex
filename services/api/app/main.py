@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import app.models  # noqa: F401
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.core.rate_limit import RateLimitMiddleware
 from app.db.base import Base
 from app.db.session import engine
 
@@ -28,6 +29,7 @@ app = FastAPI(
     description="Off-chain index and workflow API for the Validex voucher marketplace.",
     lifespan=lifespan,
 )
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -36,4 +38,3 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router, prefix="/api/v1")
-

@@ -1,6 +1,7 @@
 "use client";
 
 import { getStoredSession } from "./auth";
+import type { VoucherPass } from "./voucherQr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -21,6 +22,17 @@ export type MerchantApplication = {
   business_name: string;
   description: string;
   address: string;
+};
+
+export type StaffWallet = { id: string; merchant_id: string; wallet_address: string; active: boolean; created_at: string };
+export type StaffCampaign = { campaign_id: string; title: string; merchant_name: string };
+export type ScanResult = {
+  voucher_id: string; campaign_id: string; campaign_title: string;
+  owner_wallet: string; chain_voucher: string; can_prepare_redemption: boolean;
+};
+export type AuditEvent = {
+  id: string; action: string; actor_wallet: string | null;
+  entity_type: string; entity_id: string; created_at: string;
 };
 
 function tokenFor(walletAddress: string): string {
@@ -87,4 +99,49 @@ export async function decideMerchantApplication(
   );
   if (!response.ok) throw new Error(await readError(response));
   return response.json() as Promise<MerchantProfile>;
+}
+
+export async function listStaff(walletAddress: string): Promise<StaffWallet[]> {
+  const response = await authorizedFetch("/api/v1/merchants/me/staff", walletAddress);
+  if (!response.ok) throw new Error(await readError(response));
+  return response.json() as Promise<StaffWallet[]>;
+}
+
+export async function grantStaff(walletAddress: string, staffWallet: string): Promise<StaffWallet> {
+  const response = await authorizedFetch("/api/v1/merchants/me/staff", walletAddress, {
+    method: "POST", body: JSON.stringify({ wallet_address: staffWallet }),
+  });
+  if (!response.ok) throw new Error(await readError(response));
+  return response.json() as Promise<StaffWallet>;
+}
+
+export async function revokeStaff(walletAddress: string, staffId: string): Promise<void> {
+  const response = await authorizedFetch(`/api/v1/merchants/me/staff/${staffId}`, walletAddress, { method: "DELETE" });
+  if (!response.ok) throw new Error(await readError(response));
+}
+
+export async function listStaffCampaigns(walletAddress: string): Promise<StaffCampaign[]> {
+  const response = await authorizedFetch("/api/v1/merchants/staff/campaigns", walletAddress);
+  if (!response.ok) throw new Error(await readError(response));
+  return response.json() as Promise<StaffCampaign[]>;
+}
+
+export async function getCampaignScanRole(walletAddress: string, campaignId: string): Promise<"owner" | "staff" | null> {
+  const response = await authorizedFetch(`/api/v1/merchants/campaigns/${campaignId}/scan-access`, walletAddress);
+  if (!response.ok) throw new Error(await readError(response));
+  return (await response.json() as { role: "owner" | "staff" | null }).role;
+}
+
+export async function verifyVoucherQr(walletAddress: string, pass: VoucherPass): Promise<ScanResult> {
+  const response = await authorizedFetch("/api/v1/vouchers/scan", walletAddress, {
+    method: "POST", body: JSON.stringify(pass),
+  });
+  if (!response.ok) throw new Error(await readError(response));
+  return response.json() as Promise<ScanResult>;
+}
+
+export async function listAuditEvents(walletAddress: string, suspiciousOnly = false): Promise<AuditEvent[]> {
+  const response = await authorizedFetch(`/api/v1/admin/audit?suspicious_only=${suspiciousOnly}&limit=50`, walletAddress);
+  if (!response.ok) throw new Error(await readError(response));
+  return response.json() as Promise<AuditEvent[]>;
 }

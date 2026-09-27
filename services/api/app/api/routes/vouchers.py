@@ -9,7 +9,13 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import CurrentUserDep, SessionDep
 from app.core.config import get_settings
-from app.domain.solana_chain import ChainVerificationError, campaign_context, verify_voucher
+from app.domain.solana_chain import (
+    ChainVerificationError,
+    account_data,
+    campaign_context,
+    discriminator,
+    verify_voucher,
+)
 from app.domain.transaction_proofs import purchase_proof, redeem_proof, refund_proof
 from app.domain.transaction_tracker import verify_transaction
 from app.domain.vouchers import (
@@ -25,8 +31,11 @@ from app.models.entities import (
     Campaign,
     CampaignStatus,
     Merchant,
+    MerchantStaff,
     Transaction,
     TransactionStatus,
+    User,
+    VerificationStatus,
     Voucher,
     VoucherStatus,
 )
@@ -35,11 +44,104 @@ from app.schemas.vouchers import (
     VoucherPurchaseIntent,
     VoucherPurchaseIntentResponse,
     VoucherRead,
+    VoucherScanRequest,
+    VoucherScanResult,
 )
 
 router = APIRouter(prefix="/vouchers", tags=["vouchers"])
 settings = get_settings()
 PENDING_RESERVATION_MINUTES = 15
+
+
+@router.post("/scan", response_model=VoucherScanResult)
+async def scan_voucher(
+    payload: VoucherScanRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> VoucherScanResult:
+    async def reject(detail: str, action: str = "security.qr_rejected") -> None:
+        session.add(
+            AuditLog(
+                actor_id=current_user.id,
+                action=action,
+                entity_type="voucher",
+                entity_id=str(payload.voucherId),
+            )
+        )
+        await session.commit()
+        raise HTTPException(status_code=403, detail=detail)
+
+    campaign = await session.get(Campaign, payload.campaignId)
+    if campaign is None or not campaign.onchain_address:
+        await reject("Voucher campaign is not available")
+    merchant = await session.get(Merchant, campaign.merchant_id)
+    if merchant is None or merchant.verification_status != VerificationStatus.VERIFIED:
+        await reject("Voucher merchant is not available")
+    is_owner = merchant.owner_user_id == current_user.id
+    staff = (
+        None
+        if is_owner
+        else await session.scalar(
+            select(MerchantStaff).where(
+                MerchantStaff.merchant_id == merchant.id,
+                MerchantStaff.wallet_address == current_user.wallet_address,
+                MerchantStaff.active.is_(True),
+            )
+        )
+    )
+    if not is_owner and staff is None:
+        await reject("Merchant staff access required", "security.unauthorized_scan")
+    voucher = await session.get(Voucher, payload.voucherId)
+    owner = await session.get(User, voucher.owner_user_id) if voucher else None
+    if (
+        payload.v != 1
+        or payload.type != "validex-voucher"
+        or voucher is None
+        or owner is None
+        or voucher.campaign_id != campaign.id
+        or voucher.status != VoucherStatus.ACTIVE
+        or voucher.expires_at <= datetime.now(UTC)
+        or campaign.status != CampaignStatus.PUBLISHED
+        or voucher.onchain_address != payload.chainVoucher
+        or owner.wallet_address != payload.ownerWallet
+        or payload.code != f"VLDX-{voucher.voucher_hash.hex()[:12].upper()}"
+    ):
+        await reject("Voucher is invalid, expired or already used")
+    try:
+        await verify_voucher(
+            address=payload.chainVoucher,
+            campaign_address=campaign.onchain_address,
+            buyer_wallet=owner.wallet_address,
+            voucher_hash=voucher.voucher_hash,
+            expected_status=0,
+            expected_price_minor=campaign.price_minor,
+        )
+        chain_campaign = await account_data(campaign.onchain_address)
+        if (
+            len(chain_campaign) < 180
+            or chain_campaign[:8] != discriminator("Campaign")
+            or chain_campaign[178] != 0
+        ):
+            raise ChainVerificationError("Campaign is cancelled on-chain")
+    except ChainVerificationError as error:
+        await reject(str(error), "security.qr_chain_mismatch")
+    session.add(
+        AuditLog(
+            actor_id=current_user.id,
+            action="voucher.qr_verified",
+            entity_type="voucher",
+            entity_id=str(voucher.id),
+        )
+    )
+    await session.commit()
+    return VoucherScanResult(
+        voucher_id=voucher.id,
+        campaign_id=campaign.id,
+        campaign_title=campaign.title,
+        owner_wallet=owner.wallet_address,
+        chain_voucher=payload.chainVoucher,
+        can_prepare_redemption=is_owner,
+    )
 
 
 async def assert_signature_available(
@@ -83,6 +185,20 @@ async def commit_verified_transaction(session: SessionDep) -> None:
             status_code=status.HTTP_409_CONFLICT,
             detail="Transaction signature has already been used",
         ) from error
+
+
+async def record_rejected_transaction(
+    session: SessionDep, *, user_id: uuid.UUID, voucher_id: uuid.UUID
+) -> None:
+    session.add(
+        AuditLog(
+            actor_id=user_id,
+            action="security.transaction_rejected",
+            entity_type="voucher",
+            entity_id=str(voucher_id),
+        )
+    )
+    await session.commit()
 
 
 def voucher_response(
@@ -258,6 +374,7 @@ async def confirm_purchase(
             ),
         )
     except ChainVerificationError as error:
+        await record_rejected_transaction(session, user_id=current_user.id, voucher_id=voucher.id)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     voucher.onchain_address = payload.onchain_address
     voucher.status = VoucherStatus.ACTIVE
@@ -346,6 +463,7 @@ async def confirm_redemption(
             ),
         )
     except ChainVerificationError as error:
+        await record_rejected_transaction(session, user_id=current_user.id, voucher_id=voucher.id)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     split = calculate_payment_split(campaign.price_minor, 200)
     voucher.status = VoucherStatus.REDEEMED
@@ -362,6 +480,14 @@ async def confirm_redemption(
             merchant_amount=split.merchant_amount,
             status=TransactionStatus.FINALIZED,
             confirmed_at=datetime.now(UTC),
+        )
+    )
+    session.add(
+        AuditLog(
+            actor_id=current_user.id,
+            action="voucher.redeemed",
+            entity_type="voucher",
+            entity_id=str(voucher.id),
         )
     )
     await commit_verified_transaction(session)
@@ -427,6 +553,7 @@ async def confirm_refund(
             ),
         )
     except ChainVerificationError as error:
+        await record_rejected_transaction(session, user_id=current_user.id, voucher_id=voucher.id)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     voucher.status = VoucherStatus.REFUNDED
     session.add(
@@ -439,6 +566,14 @@ async def confirm_refund(
             gross_amount=campaign.price_minor,
             status=TransactionStatus.FINALIZED,
             confirmed_at=datetime.now(UTC),
+        )
+    )
+    session.add(
+        AuditLog(
+            actor_id=current_user.id,
+            action="voucher.refunded",
+            entity_type="voucher",
+            entity_id=str(voucher.id),
         )
     )
     await commit_verified_transaction(session)

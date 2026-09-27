@@ -36,3 +36,22 @@ class VoucherPurchaseIntentResponse(VoucherRead):
 class VoucherChainConfirmation(BaseModel):
     onchain_address: str = Field(min_length=32, max_length=44)
     transaction_signature: str = Field(min_length=64, max_length=88)
+
+
+class VoucherScanRequest(BaseModel):
+    v: int
+    type: str
+    voucherId: uuid.UUID
+    campaignId: uuid.UUID
+    code: str = Field(min_length=1, max_length=64)
+    ownerWallet: str = Field(min_length=32, max_length=44)
+    chainVoucher: str = Field(min_length=32, max_length=44)
+
+
+class VoucherScanResult(BaseModel):
+    voucher_id: uuid.UUID
+    campaign_id: uuid.UUID
+    campaign_title: str
+    owner_wallet: str
+    chain_voucher: str
+    can_prepare_redemption: bool

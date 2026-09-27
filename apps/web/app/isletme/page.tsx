@@ -8,7 +8,13 @@ import { CampaignDraft, useMarketplace } from "../../lib/marketplace";
 import {
   createMerchantApplication,
   getMyMerchant,
+  grantStaff,
+  listStaff,
+  listStaffCampaigns,
   MerchantProfile,
+  revokeStaff,
+  StaffCampaign,
+  StaffWallet,
 } from "../../lib/merchantApi";
 import {
   accountExists, chainConfigured, createCampaignInstruction, hashCampaignMetadata, loadChain,
@@ -39,6 +45,10 @@ export default function MerchantDashboard() {
   const [application, setApplication] = useState(EMPTY_APPLICATION);
   const [applicationBusy, setApplicationBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [staffWallet, setStaffWallet] = useState("");
+  const [staff, setStaff] = useState<StaffWallet[]>([]);
+  const [staffCampaigns, setStaffCampaigns] = useState<StaffCampaign[]>([]);
+  const [staffBusy, setStaffBusy] = useState(false);
 
   useEffect(() => {
     if (!walletAddress) {
@@ -53,6 +63,24 @@ export default function MerchantDashboard() {
       });
     return () => { active = false; };
   }, [walletAddress]);
+
+  useEffect(() => {
+    if (!walletAddress) { setStaffCampaigns([]); return; }
+    let active = true;
+    listStaffCampaigns(walletAddress)
+      .then((items) => { if (active) setStaffCampaigns(items); })
+      .catch(() => { if (active) setStaffCampaigns([]); });
+    return () => { active = false; };
+  }, [walletAddress]);
+
+  useEffect(() => {
+    if (!walletAddress || merchantProfile?.verification_status !== "verified") { setStaff([]); return; }
+    let active = true;
+    listStaff(walletAddress)
+      .then((items) => { if (active) setStaff(items); })
+      .catch((error) => { if (active) setNotice(error instanceof Error ? error.message : "Çalışanlar alınamadı."); });
+    return () => { active = false; };
+  }, [walletAddress, merchantProfile?.verification_status]);
 
   const myCampaigns = useMemo(
     () => marketplace.campaigns.filter((campaign) => walletAddress && campaign.ownerWallet === walletAddress),
@@ -153,6 +181,32 @@ export default function MerchantDashboard() {
     }
   }
 
+  async function addStaff(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!walletAddress) return;
+    try {
+      setStaffBusy(true);
+      await grantStaff(walletAddress, staffWallet.trim());
+      setStaff(await listStaff(walletAddress));
+      setStaffWallet("");
+      setNotice("Çalışan cüzdanına yalnızca QR doğrulama yetkisi verildi.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Çalışan yetkisi verilemedi.");
+    } finally { setStaffBusy(false); }
+  }
+
+  async function removeStaff(staffId: string) {
+    if (!walletAddress) return;
+    try {
+      setStaffBusy(true);
+      await revokeStaff(walletAddress, staffId);
+      setStaff(await listStaff(walletAddress));
+      setNotice("Çalışanın QR yetkisi kaldırıldı.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Çalışan yetkisi kaldırılamadı.");
+    } finally { setStaffBusy(false); }
+  }
+
   return (
     <main className="dashboardPage merchantDashboard">
       <DashboardHeader role="merchant" onAddressChange={setWalletAddress} />
@@ -162,12 +216,12 @@ export default function MerchantDashboard() {
           <h1>Kampanyanı oluştur, mahallene ulaş.</h1>
           <p>Kupon fiyatını, stoğunu ve süresini belirle; satışlarını tek ekrandan izle.</p>
         </div>
-        <div className="verificationCard"><span>İŞLETME DURUMU</span><strong>{!walletAddress ? "Cüzdan bekleniyor" : merchantProfile === undefined ? "Kontrol ediliyor…" : merchantProfile === null ? "Başvuru gerekli" : merchantProfile.verification_status === "verified" ? "Onaylı işletme" : merchantProfile.verification_status === "pending" ? "Onay bekleniyor" : "Başvuru reddedildi"}</strong><small>{merchantProfile?.business_name ?? "Kampanya yayımlamak için işletme doğrulaması zorunludur."}</small></div>
+        <div className="verificationCard"><span>İŞLETME DURUMU</span><strong>{!walletAddress ? "Cüzdan bekleniyor" : merchantProfile === undefined ? "Kontrol ediliyor…" : merchantProfile === null && staffCampaigns.length ? "QR doğrulama çalışanı" : merchantProfile === null ? "Başvuru gerekli" : merchantProfile.verification_status === "verified" ? "Onaylı işletme" : merchantProfile.verification_status === "pending" ? "Onay bekleniyor" : "Başvuru reddedildi"}</strong><small>{merchantProfile?.business_name ?? (staffCampaigns.length ? "Atanmış kampanyaların QR kodlarını doğrulayabilirsiniz." : "Kampanya yayımlamak için işletme doğrulaması zorunludur.")}</small></div>
       </section>
 
       {notice ? <div className="dashboardShell notice" role="status">{notice}<button onClick={() => setNotice(null)}>×</button></div> : null}
 
-      {walletAddress && merchantProfile === null ? (
+      {walletAddress && merchantProfile === null && !staffCampaigns.length ? (
         <section className="dashboardShell onboardingCard">
           <div><p className="eyebrow">İŞLETME BAŞVURUSU</p><h2>Validex’te işletmeni doğrula.</h2><p>İşletme bilgileri zincire yazılmaz. Yönetici incelemesinden sonra kampanya yayımlama yetkisi cüzdanınıza tanımlanır.</p></div>
           <form onSubmit={submitApplication}>
@@ -180,6 +234,10 @@ export default function MerchantDashboard() {
       ) : null}
 
       {merchantProfile?.verification_status === "pending" ? <div className="dashboardShell approvalState"><span>⌛</span><div><strong>Başvurunuz inceleniyor</strong><p>Onaylandığında kampanya yayımlama alanı etkinleşecektir.</p></div></div> : null}
+
+      {merchantProfile?.verification_status === "verified" && walletAddress ? <section className="dashboardShell onboardingCard"><div><p className="eyebrow">ÇALIŞAN YETKİLERİ</p><h2>QR doğrulama cüzdanları</h2><p>Çalışanlar kuponun API ve zincir durumunu kontrol eder. Kupon kullanımı ve USDC ödemesi için işletme sahibi imzası gerekir.</p></div><div><form className="manualCodeForm" onSubmit={addStaff}><label>Çalışan Solana public key'i<input required value={staffWallet} onChange={(event) => setStaffWallet(event.target.value)} /></label><button className="secondaryButton wide" disabled={staffBusy} type="submit">QR yetkisi ver</button></form><div className="manageList">{staff.filter((item) => item.active).map((item) => <div className="manageRow" key={item.id}><span>{item.wallet_address}</span><button className="secondaryButton" disabled={staffBusy} onClick={() => void removeStaff(item.id)} type="button">Yetkiyi kaldır</button></div>)}</div></div></section> : null}
+
+      {staffCampaigns.length ? <section className="dashboardShell onboardingCard"><div><p className="eyebrow">ÇALIŞAN ERİŞİMİ</p><h2>Doğrulayabileceğiniz kampanyalar</h2><p>Bu erişim yalnızca QR kontrolü içindir; cüzdanınız escrow ödemesini imzalayamaz.</p></div><div className="manageList">{staffCampaigns.map((item) => <Link className="manageRow" href={`/isletme/kampanyalar/${item.campaign_id}/tara`} key={item.campaign_id}>{item.merchant_name} · {item.title} →</Link>)}</div></section> : null}
 
       <section className="dashboardShell metricGrid">
         <div><span>Aktif kampanya</span><strong>{myCampaigns.filter((item) => item.status === "published").length}</strong></div>

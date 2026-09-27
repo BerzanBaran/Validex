@@ -7,7 +7,9 @@ import { WalletButton } from "../../components/WalletButton";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import {
   decideMerchantApplication,
+  listAuditEvents,
   listMerchantApplications,
+  AuditEvent,
   MerchantProfile,
 } from "../../lib/merchantApi";
 import {
@@ -19,18 +21,22 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<MerchantProfile[]>([]);
   const [verified, setVerified] = useState<MerchantProfile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<AuditEvent[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!walletAddress) {
       setApplications([]);
       setVerified([]);
+      setAuditEvents([]);
+      setSecurityEvents([]);
       return;
     }
     let active = true;
     setLoading(true);
-    Promise.all([listMerchantApplications(walletAddress), listMerchantApplications(walletAddress, "verified")])
-      .then(([pendingItems, verifiedItems]) => { if (active) { setApplications(pendingItems); setVerified(verifiedItems); } })
+    Promise.all([listMerchantApplications(walletAddress), listMerchantApplications(walletAddress, "verified"), listAuditEvents(walletAddress), listAuditEvents(walletAddress, true)])
+      .then(([pendingItems, verifiedItems, audit, suspicious]) => { if (active) { setApplications(pendingItems); setVerified(verifiedItems); setAuditEvents(audit); setSecurityEvents(suspicious); } })
       .catch((error) => { if (active) setMessage(error instanceof Error ? error.message : "Başvurular alınamadı."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -68,9 +74,11 @@ export default function AdminPage() {
       {message ? <div className="dashboardShell notice" role="status">{message}<button onClick={() => setMessage(null)}>×</button></div> : null}
       <section className="dashboardShell adminApplications">
         <div className="contentHeading"><div><p className="eyebrow">DOĞRULAMA KUYRUĞU</p><h2>İşletme başvuruları</h2></div><StatusBadge tone={walletAddress ? "success" : "warning"}>{walletAddress ? "CÜZDAN BAĞLI" : "YÖNETİCİ CÜZDANI GEREKLİ"}</StatusBadge></div>
-        {!walletAddress ? <div className="emptyState">Başvuruları görmek için `VALIDEX_ADMIN_WALLETS` içinde tanımlı yönetici cüzdanını bağlayın.</div> : loading ? <div className="emptyState">Başvurular yükleniyor…</div> : applications.length ? <div className="applicationList">{applications.map((merchant) => <article key={merchant.id}><div><StatusBadge tone="warning">BEKLİYOR</StatusBadge><h3>{merchant.business_name}</h3><p>{merchant.description || "Açıklama eklenmemiş."}</p><address>{merchant.address}</address><small>{merchant.wallet_address.slice(0, 6)}…{merchant.wallet_address.slice(-6)} · {new Date(merchant.created_at).toLocaleDateString("tr-TR")}</small></div><div className="decisionActions"><button onClick={() => void decide(merchant, false)} type="button">Reddet</button><button className="approve" onClick={() => void decide(merchant, true)} type="button">Onayla</button></div></article>)}</div> : <div className="emptyState">Bekleyen işletme başvurusu bulunmuyor.</div>}
+        {!walletAddress ? <div className="emptyState">Başvuruları görmek için `VALIDEX_ADMIN_WALLET` ile tanımlı yönetici cüzdanını bağlayın.</div> : loading ? <div className="emptyState">Başvurular yükleniyor…</div> : applications.length ? <div className="applicationList">{applications.map((merchant) => <article key={merchant.id}><div><StatusBadge tone="warning">BEKLİYOR</StatusBadge><h3>{merchant.business_name}</h3><p>{merchant.description || "Açıklama eklenmemiş."}</p><address>{merchant.address}</address><small>{merchant.wallet_address.slice(0, 6)}…{merchant.wallet_address.slice(-6)} · {new Date(merchant.created_at).toLocaleDateString("tr-TR")}</small></div><div className="decisionActions"><button onClick={() => void decide(merchant, false)} type="button">Reddet</button><button className="approve" onClick={() => void decide(merchant, true)} type="button">Onayla</button></div></article>)}</div> : <div className="emptyState">Bekleyen işletme başvurusu bulunmuyor.</div>}
       </section>
       {walletAddress && verified.length ? <section className="dashboardShell adminApplications"><div className="contentHeading"><div><p className="eyebrow">ZİNCİR KAYDI</p><h2>Onaylı işletmeler</h2></div></div><div className="applicationList">{verified.map((merchant) => <article key={merchant.id}><div><h3>{merchant.business_name}</h3><small>{merchant.wallet_address}</small></div><div className="decisionActions"><button className="approve" disabled={!chainConfigured()} onClick={() => void syncMerchant(merchant).then(() => setMessage("Zincir kaydı doğrulandı.")).catch((error) => setMessage(error instanceof Error ? error.message : "Zincir kaydı başarısız."))} type="button">Zincir kaydını doğrula</button></div></article>)}</div></section> : null}
+      {walletAddress ? <section className="dashboardShell adminApplications"><div className="contentHeading"><div><p className="eyebrow">GÜVENLİK</p><h2>Şüpheli doğrulamalar</h2></div><StatusBadge tone={securityEvents.length ? "warning" : "success"}>{securityEvents.length} kayıt</StatusBadge></div><div className="applicationList">{securityEvents.length ? securityEvents.map((event) => <article key={event.id}><div><strong>{event.action}</strong><p>{event.entity_type}: {event.entity_id}</p><small>{event.actor_wallet ?? "Bilinmeyen cüzdan"} · {new Date(event.created_at).toLocaleString("tr-TR")}</small></div></article>) : <div className="emptyState">Şüpheli QR denemesi kaydedilmedi.</div>}</div></section> : null}
+      {walletAddress ? <section className="dashboardShell adminApplications"><div className="contentHeading"><div><p className="eyebrow">DENETİM</p><h2>Son işlemler</h2></div></div><div className="applicationList">{auditEvents.map((event) => <article key={event.id}><div><strong>{event.action}</strong><p>{event.entity_type}: {event.entity_id}</p><small>{event.actor_wallet ?? "Bilinmeyen cüzdan"} · {new Date(event.created_at).toLocaleString("tr-TR")}</small></div></article>)}</div></section> : null}
     </main>
   );
 }

@@ -60,7 +60,11 @@ MerchantUserDep = Annotated[User, Depends(require_merchant)]
 
 
 async def require_admin(current_user: CurrentUserDep) -> User:
-    if current_user.role != UserRole.ADMIN:
+    if (
+        current_user.role != UserRole.ADMIN
+        or not get_settings().admin_wallet
+        or current_user.wallet_address != get_settings().admin_wallet
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
     return current_user
 

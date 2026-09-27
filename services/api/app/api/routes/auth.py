@@ -74,9 +74,7 @@ async def verify_challenge(
 ) -> AuthTokenResponse:
     now = datetime.now(UTC)
     result = await session.scalars(
-        select(AuthChallenge)
-        .where(AuthChallenge.id == payload.challenge_id)
-        .with_for_update()
+        select(AuthChallenge).where(AuthChallenge.id == payload.challenge_id).with_for_update()
     )
     challenge = result.one_or_none()
     if challenge is None or challenge.wallet_address != payload.wallet_address:
@@ -100,7 +98,9 @@ async def verify_challenge(
 
     user = await session.scalar(select(User).where(User.wallet_address == payload.wallet_address))
     configured_role = (
-        UserRole.ADMIN if payload.wallet_address in settings.admin_wallets else UserRole.CUSTOMER
+        UserRole.ADMIN
+        if settings.admin_wallet and payload.wallet_address == settings.admin_wallet
+        else UserRole.CUSTOMER
     )
     if user is None:
         user = User(wallet_address=payload.wallet_address, role=configured_role, status="active")
@@ -108,6 +108,8 @@ async def verify_challenge(
         await session.flush()
     elif configured_role == UserRole.ADMIN and user.role != UserRole.ADMIN:
         user.role = UserRole.ADMIN
+    elif configured_role != UserRole.ADMIN and user.role == UserRole.ADMIN:
+        user.role = UserRole.CUSTOMER
     if user.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
