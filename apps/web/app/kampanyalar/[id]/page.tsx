@@ -41,7 +41,7 @@ export default function CampaignDetailPage() {
   }
 
   if (!marketplace.ready) return <main className="dashboardPage"><div className="pageState">Kampanya yükleniyor…</div></main>;
-  if (!campaign) return <main className="dashboardPage"><div className="pageState"><h1>Kampanya bulunamadı</h1><Link href="/musteri">Kampanyalara dön</Link></div></main>;
+  if (!campaign) return <main className="dashboardPage"><div className="pageState"><h1>{marketplace.campaignError ? "Kampanya yüklenemedi" : "Kampanya bulunamadı"}</h1>{marketplace.campaignError ? <p>{marketplace.campaignError}</p> : null}<Link href="/musteri">Kampanyalara dön</Link></div></main>;
 
   const expired = new Date(campaign.expiresAt).getTime() <= Date.now();
   const soldOut = campaign.sold >= campaign.stock;

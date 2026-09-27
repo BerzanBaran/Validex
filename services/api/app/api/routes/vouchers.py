@@ -21,6 +21,7 @@ from app.models.entities import (
     AuditLog,
     Campaign,
     CampaignStatus,
+    Merchant,
     Transaction,
     TransactionStatus,
     Voucher,
@@ -38,7 +39,13 @@ settings = get_settings()
 PENDING_RESERVATION_MINUTES = 15
 
 
-def voucher_response(voucher: Voucher, *, price_minor: int | None = None) -> VoucherRead:
+def voucher_response(
+    voucher: Voucher,
+    *,
+    price_minor: int | None = None,
+    campaign: Campaign | None = None,
+    merchant: Merchant | None = None,
+) -> VoucherRead:
     secret = decrypt_voucher_secret(
         voucher.encrypted_secret,
         settings.voucher_encryption_secret,
@@ -53,6 +60,12 @@ def voucher_response(voucher: Voucher, *, price_minor: int | None = None) -> Vou
         "onchain_address": voucher.onchain_address,
         "secret_base64": base64.b64encode(secret).decode("ascii"),
         "voucher_hash_hex": voucher.voucher_hash.hex(),
+        "campaign_title": campaign.title if campaign else None,
+        "merchant_name": merchant.business_name if merchant else None,
+        "price_minor": (
+            price_minor if price_minor is not None else campaign.price_minor if campaign else None
+        ),
+        "redeemed_at": voucher.redeemed_at,
     }
     if price_minor is not None:
         return VoucherPurchaseIntentResponse(**payload, price_minor=price_minor)
@@ -134,7 +147,7 @@ async def create_purchase_intent(
     )
     await session.commit()
     await session.refresh(voucher)
-    return voucher_response(voucher, price_minor=campaign.price_minor)
+    return voucher_response(voucher, price_minor=campaign.price_minor, campaign=campaign)
 
 
 @router.post("/{voucher_id}/confirm", response_model=VoucherRead)
@@ -318,12 +331,17 @@ async def list_my_vouchers(
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> list[VoucherRead]:
-    result = await session.scalars(
-        select(Voucher)
+    result = await session.execute(
+        select(Voucher, Campaign, Merchant)
+        .join(Campaign, Voucher.campaign_id == Campaign.id)
+        .join(Merchant, Campaign.merchant_id == Merchant.id)
         .where(Voucher.owner_user_id == current_user.id)
         .order_by(Voucher.created_at.desc())
     )
-    return [voucher_response(voucher) for voucher in result]
+    return [
+        voucher_response(voucher, campaign=campaign, merchant=merchant)
+        for voucher, campaign, merchant in result.all()
+    ]
 
 
 @router.get("/{voucher_id}", response_model=VoucherRead)
@@ -337,4 +355,6 @@ async def get_my_voucher(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Voucher not found")
     if voucher.owner_user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Voucher access denied")
-    return voucher_response(voucher)
+    campaign = await session.get(Campaign, voucher.campaign_id)
+    merchant = await session.get(Merchant, campaign.merchant_id) if campaign else None
+    return voucher_response(voucher, campaign=campaign, merchant=merchant)

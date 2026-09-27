@@ -15,8 +15,9 @@ export default function CustomerDashboard() {
   const balances = useSolanaBalances(walletAddress);
 
   useEffect(() => {
-    if (walletAddress && chainConfigured()) void marketplace.syncMyVouchers(walletAddress).catch(() => {});
-  }, [walletAddress, marketplace.syncMyVouchers]);
+    if (walletAddress) void marketplace.syncMyVouchers(walletAddress).catch(() => {});
+    else marketplace.clearVouchers();
+  }, [walletAddress, marketplace.syncMyVouchers, marketplace.clearVouchers]);
 
   const campaigns = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("tr-TR");
@@ -80,18 +81,22 @@ export default function CustomerDashboard() {
             </article>
           ))}
         </div>
-        {!campaigns.length ? <div className="emptyState">Aramanıza uygun aktif kampanya bulunamadı.</div> : null}
+        {marketplace.campaignError ? <div className="emptyState" role="alert">Kampanyalar API'den yüklenemedi: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Tekrar dene</button></div> : !campaigns.length ? <div className="emptyState">Aramanıza uygun aktif kampanya bulunamadı.</div> : null}
       </section>
 
       <section className="dashboardShell vouchersSection">
-        <div className="contentHeading"><div><p className="eyebrow">CÜZDANIM</p><h2>Kuponlarım</h2></div><span>{myVouchers.length} aktif kupon</span></div>
+        <div className="contentHeading"><div><p className="eyebrow">CÜZDANIM</p><h2>Kuponlarım</h2></div><span>{myVouchers.filter((voucher) => voucher.status === "active").length} aktif kupon</span></div>
         {!walletAddress ? (
           <div className="emptyState">Kuponlarınızı görmek için Solflare veya Phantom cüzdanınızı bağlayın.</div>
+        ) : marketplace.vouchersLoading ? (
+          <div className="emptyState">Kuponlar PostgreSQL'den yükleniyor…</div>
+        ) : marketplace.voucherError ? (
+          <div className="emptyState" role="alert">{marketplace.voucherError} <button className="secondaryButton" onClick={() => void marketplace.syncMyVouchers(walletAddress).catch(() => {})} type="button">Tekrar dene</button></div>
         ) : myVouchers.length ? (
           <div className="voucherList">
             {myVouchers.map((voucher) => (
               <Link className="voucherRow" href={`/musteri/kuponlar/${voucher.id}`} key={voucher.id}>
-                <div><span className="statusPill">{voucher.status === "pending" ? "ZİNCİR KONTROLÜ" : voucher.status === "redeemed" ? "KULLANILDI" : voucher.status === "refunded" ? "İADE" : "AKTİF"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
+                <div><span className="statusPill">{voucher.status === "pending" ? "ZİNCİR KONTROLÜ" : voucher.status === "redeemed" ? "KULLANILDI" : voucher.status === "refunded" ? "İADE" : voucher.status === "active" ? "AKTİF" : "KAPALI"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
                 <div className="voucherCode"><small>KUPON REFERANSI</small><strong>{voucher.code}</strong></div>
               </Link>
             ))}

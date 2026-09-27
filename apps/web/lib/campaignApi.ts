@@ -37,12 +37,25 @@ function toCampaign(item: ApiCampaign): Campaign {
 }
 
 export async function listOnchainCampaigns(): Promise<Campaign[]> {
-  const responses = await Promise.all(["published", "cancelled"].map((status) =>
-    fetch(`${API_URL}/api/v1/campaigns?status=${status}`, { cache: "no-store" }),
-  ));
-  if (responses.some((response) => !response.ok)) throw new Error("Zincir kampanyaları API'den yüklenemedi.");
-  const groups = await Promise.all(responses.map((response) => response.json() as Promise<ApiCampaign[]>));
+  const pageSize = 100;
+  async function loadStatus(status: "published" | "cancelled"): Promise<ApiCampaign[]> {
+    const all: ApiCampaign[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const response = await fetch(`${API_URL}/api/v1/campaigns?status=${status}&limit=${pageSize}&offset=${offset}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Kampanyalar API'den yüklenemedi.");
+      const page = await response.json() as ApiCampaign[];
+      all.push(...page);
+      if (page.length < pageSize) return all;
+    }
+  }
+  const groups = await Promise.all([loadStatus("published"), loadStatus("cancelled")]);
   return groups.flat().map(toCampaign);
+}
+
+export async function getOnchainCampaign(campaignId: string): Promise<Campaign> {
+  const response = await fetch(`${API_URL}/api/v1/campaigns/${encodeURIComponent(campaignId)}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Kampanya API'den yüklenemedi.");
+  return toCampaign(await response.json() as ApiCampaign);
 }
 
 export async function publishOnchainCampaign(input: {

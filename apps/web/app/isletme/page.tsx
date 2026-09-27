@@ -202,8 +202,9 @@ export default function MerchantDashboard() {
 
         <div className="merchantCampaigns">
           <div className="contentHeading"><div><p className="eyebrow">KAMPANYALARIM</p><h2>Yayındaki kuponlar</h2></div></div>
+          {marketplace.campaignError ? <div className="emptyState" role="alert">Kampanyalar API'den yüklenemedi: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Tekrar dene</button></div> : null}
           {!walletAddress ? <div className="emptyState">Kampanyalarınızı görmek için işletme cüzdanınızı bağlayın.</div> : null}
-          {walletAddress && !myCampaigns.length ? <div className="emptyState">Henüz kampanya oluşturmadınız. Formu doldurarak ilk kuponunuzu yayımlayın.</div> : null}
+          {walletAddress && !marketplace.campaignError && !myCampaigns.length ? <div className="emptyState">Henüz kampanya oluşturmadınız. Formu doldurarak ilk kuponunuzu yayımlayın.</div> : null}
           <div className="manageList">
             {myCampaigns.map((campaign) => (
               <article className="manageRow" key={campaign.id}>
@@ -215,7 +216,7 @@ export default function MerchantDashboard() {
         </div>
       </section>
 
-      <div className="demoBanner">{chainConfigured() ? "Yayımlama için işletme cüzdanı imzası ve zincir onayı gerekir. Liste bilgileri bu tarayıcıda saklanır." : "Zincir modu kapalı: Yönetici adresi, program ve USDC mint kurulmadan kampanya yayımlanamaz."}</div>
+      <div className="demoBanner">{chainConfigured() ? "Yayımlama için işletme cüzdanı imzası ve zincir onayı gerekir. Kampanya listesi API'den yüklenir." : "Zincir modu kapalı: Yönetici adresi, program ve USDC mint kurulmadan kampanya yayımlanamaz."}</div>
     </main>
   );
 }

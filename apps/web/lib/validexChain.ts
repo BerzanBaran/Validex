@@ -138,12 +138,12 @@ export function voucherPda(config: ChainConfig, campaign: PublicKey, voucherHash
 }
 
 export async function accountExists(config: ChainConfig, address: PublicKey): Promise<boolean> {
-  const account = await config.connection.getAccountInfo(address, "confirmed");
+  const account = await config.connection.getAccountInfo(address, "finalized");
   return Boolean(account && account.owner.equals(config.programId));
 }
 
 export async function readVoucherStatus(config: ChainConfig, address: PublicKey): Promise<"missing" | "active" | "redeemed" | "refunded"> {
-  const account = await config.connection.getAccountInfo(address, "confirmed");
+  const account = await config.connection.getAccountInfo(address, "finalized");
   if (!account) return "missing";
   if (!account.owner.equals(config.programId) || account.data.length < 130 ||
       !matches(account.data.subarray(0, 8), await discriminator("account", "Voucher"))) {
@@ -175,7 +175,7 @@ export async function sendWalletTransaction(
   onSubmitted?.(signature);
   let result;
   try {
-    result = await config.connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+    result = await config.connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "finalized");
   } catch {
     throw new Error(`İşlem gönderildi (${signature}), ancak onay yanıtı alınamadı. Yeniden göndermeden önce zinciri kontrol edin.`);
   }

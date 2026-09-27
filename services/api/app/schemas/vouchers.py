@@ -22,6 +22,10 @@ class VoucherRead(BaseModel):
     onchain_address: str | None
     secret_base64: str
     voucher_hash_hex: str
+    campaign_title: str | None = None
+    merchant_name: str | None = None
+    price_minor: int | None = None
+    redeemed_at: datetime | None = None
 
 
 class VoucherPurchaseIntentResponse(VoucherRead):

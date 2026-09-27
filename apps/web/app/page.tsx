@@ -1,34 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { WalletButton } from "../components/WalletButton";
-
-const campaigns = [
-  {
-    merchant: "Kavurucu No.7",
-    title: "İki nitelikli kahve, tek fiyat",
-    area: "Kadıköy",
-    price: "5 USDC",
-    value: "10 USDC değerinde",
-    accent: "coffee",
-  },
-  {
-    merchant: "Minoa Kitchen",
-    title: "Günün tatlısı ve filtre kahve",
-    area: "Beşiktaş",
-    price: "6 USDC",
-    value: "12 USDC değerinde",
-    accent: "berry",
-  },
-  {
-    merchant: "Atölye Brunch",
-    title: "Hafta içi öğrenci kahvaltısı",
-    area: "Şişli",
-    price: "8 USDC",
-    value: "15 USDC değerinde",
-    accent: "lime",
-  },
-];
+import { useMarketplace } from "../lib/marketplace";
 
 export default function Home() {
+  const marketplace = useMarketplace();
+  const campaigns = marketplace.campaigns.filter((campaign) =>
+    campaign.status === "published" && campaign.sold < campaign.stock &&
+    new Date(campaign.expiresAt).getTime() > Date.now(),
+  ).slice(0, 3);
+  const featured = campaigns[0];
   return (
     <main>
       <nav className="nav shell">
@@ -54,17 +36,17 @@ export default function Home() {
             <span className="trust"><b>●</b> Saklamasız ve zincir üstü</span>
           </div>
         </div>
-        <div className="heroCard" aria-label="Örnek kupon">
+        <div className="heroCard" aria-label={featured ? "Öne çıkan kampanya" : "Örnek kupon tasarımı"}>
           <div className="ticketTop">
-            <span className="tag">BUGÜNÜN SEÇİMİ</span>
+            <span className="tag">{featured ? "GÜNCEL KAMPANYA" : "ÖRNEK TASARIM"}</span>
             <span className="ticketIcon">☕</span>
           </div>
           <div className="ticketBody">
-            <p>Kavurucu No.7</p>
-            <h2>İki kahve,<br />tek fiyat.</h2>
-            <div className="ticketPrice"><strong>5</strong><span>USDC<br /><small>10 USDC yerine</small></span></div>
+            <p>{featured?.merchant ?? "Yerel işletmeler"}</p>
+            <h2>{featured?.title ?? "Yeni fırsatlar yakında."}</h2>
+            <div className="ticketPrice"><strong>{featured?.priceUsdc ?? "—"}</strong><span>USDC<br /><small>{featured ? `${featured.originalValueUsdc} USDC yerine` : "Kampanyaları keşfet"}</small></span></div>
           </div>
-          <div className="ticketFoot"><span>Kadıköy · 850 m</span><span>42 kupon kaldı</span></div>
+          <div className="ticketFoot"><span>{featured?.area ?? "Solana Devnet"}</span><span>{featured ? `${featured.stock - featured.sold} kupon kaldı` : "Canlı kampanya bekleniyor"}</span></div>
         </div>
       </section>
 
@@ -72,20 +54,21 @@ export default function Home() {
         <div className="shell">
           <div className="sectionTitle">
             <div><p className="eyebrow">YAKININDAKİLER</p><h2>Bugün ne keşfediyoruz?</h2></div>
-            <button className="filter">Tümü · İstanbul⌄</button>
+            <Link className="filter" href="/musteri">Tüm kampanyalar →</Link>
           </div>
           <div className="grid">
-            {campaigns.map((campaign, index) => (
-              <article className="campaignCard" key={campaign.title}>
+            {campaigns.map((campaign) => (
+              <article className="campaignCard" key={campaign.id}>
                 <div className={`cardVisual ${campaign.accent}`}>
-                  <span>{campaign.area}</span><b>{campaign.price.split(" ")[0]}</b><small>USDC</small>
+                  <span>{campaign.area}</span><b>{campaign.priceUsdc}</b><small>USDC</small>
                 </div>
                 <div className="cardCopy">
                   <p>{campaign.merchant}</p><h3>{campaign.title}</h3>
-                  <div><span>{campaign.value}</span><Link className="roundLink" href={`/kampanyalar/${["cmp_kavurucu_7", "cmp_minoa_kitchen", "cmp_atolye_brunch"][index]}`} aria-label={`${campaign.title} ayrıntısı`}>→</Link></div>
+                  <div><span>{campaign.originalValueUsdc} USDC değerinde</span><Link className="roundLink" href={`/kampanyalar/${campaign.id}`} aria-label={`${campaign.title} ayrıntısı`}>→</Link></div>
                 </div>
               </article>
             ))}
+            {marketplace.campaignError ? <div className="emptyState" role="alert">Kampanyalar yüklenemedi. <Link href="/musteri">Tekrar dene →</Link></div> : marketplace.ready && !campaigns.length ? <div className="emptyState">Şu anda yayında kampanya yok.</div> : null}
           </div>
         </div>
       </section>

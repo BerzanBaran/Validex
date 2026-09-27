@@ -56,7 +56,7 @@ Validex hiçbir kullanıcı veya işletme private key/seed phrase bilgisini alma
 
 ## Zincir ödeme akışı
 
-Kampanya ve kupon kayıtları API'de tutulur; tarayıcı yerel deposu yalnızca arayüz önbelleğidir. İşletme kampanyayı cüzdanıyla zincirde oluşturup API'ye doğrulatır. Müşteri önce kupon niyeti oluşturur, sonra Solflare/Phantom ile USDC'yi kampanya escrow kasasına gönderir. Kupon yalnızca zincir hesabı ve işlem imzası doğrulandıktan sonra aktifleşir. Eski örnek kampanyalar ödeme kabul etmez. Devnet kurulumu tamamlanana kadar tüm zincir işlem düğmeleri kapalıdır.
+Kampanya listesi ve cüzdana ait kuponlar API/PostgreSQL'den yüklenir; `localStorage` bu kayıtlar için kullanılmaz. İşletme kampanyayı cüzdanıyla zincirde oluşturup API'ye doğrulatır. Müşteri `purchase-intent` API'sinden bekleyen kuponu alır, sonra Solflare/Phantom ile USDC'yi kampanya escrow kasasına gönderir. Kupon yalnızca zincir hesabı ve işlem imzası `finalized` düzeyinde doğrulanıp API kaydı aktifleşince kullanılabilir. Sayfa kapanırsa bekleyen kuponun zincir durumu tekrar kontrol edilerek API kaydı kurtarılır; ödeme otomatik olarak yeniden gönderilmez. Devnet kurulumu tamamlanana kadar zincir işlem düğmeleri kapalıdır.
 
 ## Cüzdanla giriş
 

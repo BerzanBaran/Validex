@@ -20,13 +20,11 @@ export default function MerchantCampaignPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const campaign = useMemo(() => marketplace.campaigns.find((item) => item.id === id), [id, marketplace.campaigns]);
-  const vouchers = marketplace.vouchers.filter((voucher) => voucher.campaignId === id);
 
   if (!marketplace.ready) return <main className="dashboardPage"><div className="pageState">Kampanya yükleniyor…</div></main>;
   if (!campaign) return <main className="dashboardPage"><div className="pageState"><h1>Kampanya bulunamadı</h1><Link href="/isletme">İşletme paneline dön</Link></div></main>;
 
   const authorized = walletAddress === campaign.ownerWallet;
-  const redeemed = vouchers.filter((voucher) => voucher.status === "redeemed").length;
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/kampanyalar/${campaign.id}`;
 
   async function cancelCampaign() {
@@ -58,12 +56,12 @@ export default function MerchantCampaignPage() {
       </section>
       <section className="dashboardShell metricGrid managementMetrics">
         <div><span>Satılan kupon</span><strong>{campaign.sold}</strong><small>{campaign.stock} toplam stok</small></div>
-        <div><span>Kullanılan</span><strong>{redeemed}</strong><small>{Math.max(0, vouchers.length - redeemed)} aktif kupon</small></div>
+        <div><span>Kalan stok</span><strong>{Math.max(0, campaign.stock - campaign.sold)}</strong><small>Satışlar API'den okunur</small></div>
         <div><span>Brüt satış (escrow dahil)</span><strong>{(campaign.sold * campaign.priceUsdc).toFixed(2)} USDC</strong><small>İşletmeye ödeme yalnızca kupon kullanıldığında</small></div>
       </section>
       <section className="dashboardShell managementGrid">
         <article className="managementCard"><div className="cardHeading"><div><p className="eyebrow">KAPASİTE</p><h2>Satış durumu</h2></div><span>{Math.round((campaign.sold / campaign.stock) * 100)}%</span></div><CapacityMeter sold={campaign.sold} stock={campaign.stock} /><button className="secondaryButton wide" disabled={!authorized || !chainConfigured() || !campaign.chainCampaign || campaign.status !== "published" || busy} onClick={() => void cancelCampaign()} type="button">{busy ? "Zincir onayı bekleniyor…" : campaign.status === "published" ? "Kampanyayı zincirde iptal et" : "Kampanya kapalı"}</button></article>
-        <article className="managementCard"><div className="cardHeading"><div><p className="eyebrow">KUPONLAR</p><h2>Son hareketler</h2></div><span>{vouchers.length}</span></div>{vouchers.length ? <div className="activityList">{vouchers.slice(0, 6).map((voucher) => <div key={voucher.id}><span className={`activityDot ${voucher.status}`} /><div><strong>{voucher.code}</strong><small>{voucher.status === "redeemed" ? "Kullanıldı" : "Satın alındı"}</small></div><time>{new Date(voucher.redeemedAt ?? voucher.purchasedAt).toLocaleDateString("tr-TR")}</time></div>)}</div> : <div className="emptyState">Bu kampanya için henüz kupon satılmadı.</div>}</article>
+        <article className="managementCard"><div className="cardHeading"><div><p className="eyebrow">KUPONLAR</p><h2>Satış bilgisi</h2></div></div><p>Doğrulanmış kupon satışları ve kalan stok, kampanya API'sindeki güncel kayıtlardan gösterilir. Müşteri kuponları işletme tarayıcısında saklanmaz.</p></article>
       </section>
       {shareOpen ? <ShareDialog title={campaign.title} url={shareUrl} onClose={() => setShareOpen(false)} /> : null}
     </main>

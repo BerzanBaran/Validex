@@ -24,6 +24,7 @@ from app.schemas.campaigns import (
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 CampaignStatusQuery = Annotated[CampaignStatus | None, Query(alias="status")]
 LimitQuery = Annotated[int, Query(ge=1, le=100)]
+OffsetQuery = Annotated[int, Query(ge=0)]
 
 
 def campaign_read(campaign: Campaign, merchant: Merchant) -> CampaignRead:
@@ -41,12 +42,14 @@ async def list_campaigns(
     session: SessionDep,
     campaign_status: CampaignStatusQuery = CampaignStatus.PUBLISHED,
     limit: LimitQuery = 50,
+    offset: OffsetQuery = 0,
 ) -> list[CampaignRead]:
     query = (
         select(Campaign, Merchant)
         .join(Merchant, Campaign.merchant_id == Merchant.id)
         .order_by(Campaign.created_at.desc())
         .limit(limit)
+        .offset(offset)
     )
     if campaign_status is not None:
         query = query.where(Campaign.status == campaign_status)

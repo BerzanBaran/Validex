@@ -37,7 +37,7 @@ async def account_data(address: str) -> bytes:
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "getAccountInfo",
-                    "params": [address, {"encoding": "base64", "commitment": "confirmed"}],
+                    "params": [address, {"encoding": "base64", "commitment": "finalized"}],
                 },
             )
             response.raise_for_status()
@@ -145,7 +145,7 @@ async def verify_account_signature(address: str, signature: str) -> None:
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "getSignaturesForAddress",
-                    "params": [address, {"limit": 10, "commitment": "confirmed"}],
+                    "params": [address, {"limit": 10, "commitment": "finalized"}],
                 },
             )
             response.raise_for_status()
