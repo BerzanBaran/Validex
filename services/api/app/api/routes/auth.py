@@ -99,10 +99,15 @@ async def verify_challenge(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)) from error
 
     user = await session.scalar(select(User).where(User.wallet_address == payload.wallet_address))
+    configured_role = (
+        UserRole.ADMIN if payload.wallet_address in settings.admin_wallets else UserRole.CUSTOMER
+    )
     if user is None:
-        user = User(wallet_address=payload.wallet_address, role=UserRole.CUSTOMER, status="active")
+        user = User(wallet_address=payload.wallet_address, role=configured_role, status="active")
         session.add(user)
         await session.flush()
+    elif configured_role == UserRole.ADMIN and user.role != UserRole.ADMIN:
+        user.role = UserRole.ADMIN
     if user.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -30,6 +30,7 @@ export type Voucher = {
   expiresAt: string;
   code: string;
   status: "active" | "redeemed";
+  redeemedAt?: string;
 };
 
 export type CampaignDraft = Omit<Campaign, "id" | "sold" | "status" | "accent">;
@@ -193,5 +194,27 @@ export function useMarketplace() {
     writeStorage(CAMPAIGNS_KEY, next);
   }, []);
 
-  return { campaigns, vouchers, ready, createCampaign, purchaseCampaign, setCampaignStatus };
+  const redeemVoucher = useCallback((code: string, merchantWallet: string, campaignId?: string) => {
+    const currentVouchers = readStorage<Voucher[]>(VOUCHERS_KEY, []);
+    const currentCampaigns = readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS);
+    const voucher = currentVouchers.find((item) => item.code === code);
+    if (!voucher) throw new Error("Kupon bulunamadı veya QR içeriği geçersiz.");
+    if (campaignId && voucher.campaignId !== campaignId) {
+      throw new Error("Bu kupon seçili kampanyaya ait değil.");
+    }
+    const campaign = currentCampaigns.find((item) => item.id === voucher.campaignId);
+    if (!campaign || campaign.ownerWallet !== merchantWallet) {
+      throw new Error("Bu kuponu doğrulama yetkiniz yok.");
+    }
+    if (voucher.status === "redeemed") throw new Error("Bu kupon daha önce kullanılmış.");
+    if (new Date(voucher.expiresAt).getTime() <= Date.now()) throw new Error("Bu kuponun süresi dolmuş.");
+
+    const redeemed: Voucher = { ...voucher, status: "redeemed", redeemedAt: new Date().toISOString() };
+    const next = currentVouchers.map((item) => item.id === voucher.id ? redeemed : item);
+    setVouchers(next);
+    writeStorage(VOUCHERS_KEY, next);
+    return redeemed;
+  }, []);
+
+  return { campaigns, vouchers, ready, createCampaign, purchaseCampaign, setCampaignStatus, redeemVoucher };
 }

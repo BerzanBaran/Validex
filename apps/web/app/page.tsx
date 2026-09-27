@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WalletButton } from "../components/WalletButton";
 
 const campaigns = [
   {
@@ -36,6 +37,7 @@ export default function Home() {
           <a href="#campaigns">Kampanyalar</a>
           <Link href="/musteri">Müşteri paneli</Link>
           <Link href="/isletme">İşletme paneli</Link>
+          <WalletButton />
         </div>
       </nav>
 
@@ -44,7 +46,7 @@ export default function Home() {
           <p className="eyebrow">SOLANA DEVNET · YERELİ KEŞFET</p>
           <h1>Şehrin iyi köşeleri,<br /><em>daha yakın.</em></h1>
           <p className="lead">
-            Mahallendeki bağımsız işletmelerden kupon al. Phantom ile öde,
+            Mahallendeki bağımsız işletmelerden kupon al. Solflare veya Phantom ile öde,
             QR kodunu göster, anında kullan.
           </p>
           <div className="heroActions">
@@ -73,14 +75,14 @@ export default function Home() {
             <button className="filter">Tümü · İstanbul⌄</button>
           </div>
           <div className="grid">
-            {campaigns.map((campaign) => (
+            {campaigns.map((campaign, index) => (
               <article className="campaignCard" key={campaign.title}>
                 <div className={`cardVisual ${campaign.accent}`}>
                   <span>{campaign.area}</span><b>{campaign.price.split(" ")[0]}</b><small>USDC</small>
                 </div>
                 <div className="cardCopy">
                   <p>{campaign.merchant}</p><h3>{campaign.title}</h3>
-                  <div><span>{campaign.value}</span><button aria-label={`${campaign.title} ayrıntısı`}>→</button></div>
+                  <div><span>{campaign.value}</span><Link className="roundLink" href={`/kampanyalar/${["cmp_kavurucu_7", "cmp_minoa_kitchen", "cmp_atolye_brunch"][index]}`} aria-label={`${campaign.title} ayrıntısı`}>→</Link></div>
                 </div>
               </article>
             ))}
@@ -93,7 +95,7 @@ export default function Home() {
         <h2>Kod değil, güzel anılar biriktir.</h2>
         <div className="steps">
           <div><span>01</span><h3>Fırsatı seç</h3><p>Şehrindeki bağımsız işletmeleri ve güncel kampanyaları keşfet.</p></div>
-          <div><span>02</span><h3>Phantom ile öde</h3><p>USDC ödemen kendi cüzdanından, yalnızca senin onayınla gerçekleşir.</p></div>
+          <div><span>02</span><h3>Cüzdanınla onayla</h3><p>USDC ödemen Solflare veya Phantom cüzdanından, yalnızca senin onayınla gerçekleşir.</p></div>
           <div><span>03</span><h3>QR'ı göster</h3><p>Tek kullanımlık kuponunu işletmede okut ve keyfini çıkar.</p></div>
         </div>
       </section>

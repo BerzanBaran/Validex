@@ -3,17 +3,18 @@
 import { useEffect, useState } from "react";
 
 import { authenticateWallet, clearStoredSession, getStoredSession } from "../lib/auth";
-import { usePhantomWallet } from "../lib/phantom";
+import { useSolanaWallet, WalletKind, walletInstallUrl } from "../lib/solanaWallet";
 
 type WalletButtonProps = {
   onAddressChange?: (address: string | null) => void;
 };
 
 export function WalletButton({ onAddressChange }: WalletButtonProps) {
-  const wallet = usePhantomWallet();
+  const wallet = useSolanaWallet();
   const [authenticated, setAuthenticated] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [chooserOpen, setChooserOpen] = useState(false);
 
   useEffect(() => {
     setAuthenticated(wallet.address ? getStoredSession(wallet.address) !== null : false);
@@ -23,9 +24,10 @@ export function WalletButton({ onAddressChange }: WalletButtonProps) {
     onAddressChange?.(authenticated ? wallet.address : null);
   }, [authenticated, onAddressChange, wallet.address]);
 
-  async function connectAndAuthenticate() {
+  async function connectAndAuthenticate(kind: WalletKind = wallet.kind) {
     setAuthError(null);
-    const address = wallet.address ?? (await wallet.connect());
+    setChooserOpen(false);
+    const address = wallet.address ?? (await wallet.connect(kind));
     if (!address) return;
     try {
       setAuthenticating(true);
@@ -48,7 +50,7 @@ export function WalletButton({ onAddressChange }: WalletButtonProps) {
   if (wallet.address && authenticated) {
     return (
       <button className="wallet walletConnected" onClick={disconnect} type="button">
-        <span className="walletDot" /> {wallet.shortAddress}
+        <span className="walletDot" /> {wallet.kind === "solflare" ? "Solflare" : "Phantom"} · {wallet.shortAddress}
       </button>
     );
   }
@@ -58,7 +60,7 @@ export function WalletButton({ onAddressChange }: WalletButtonProps) {
       <button
         className={`wallet ${wallet.address ? "walletPending" : ""}`}
         disabled={wallet.connecting || authenticating}
-        onClick={connectAndAuthenticate}
+        onClick={() => wallet.address ? void connectAndAuthenticate() : setChooserOpen((open) => !open)}
         type="button"
       >
         {wallet.connecting
@@ -67,8 +69,26 @@ export function WalletButton({ onAddressChange }: WalletButtonProps) {
             ? "İmza bekleniyor…"
             : wallet.address
               ? `Girişi imzala · ${wallet.shortAddress}`
-              : "Phantom'u bağla"}
+              : "Cüzdana bağlan"}
       </button>
+      {chooserOpen ? (
+        <div className="walletMenu" role="dialog" aria-label="Solana cüzdanı seçin">
+          <strong>Cüzdanınızı seçin</strong>
+          {(["solflare", "phantom"] as const).map((kind) => {
+            const installed = wallet.isInstalled(kind);
+            const label = kind === "solflare" ? "Solflare" : "Phantom";
+            return installed ? (
+              <button key={kind} onClick={() => void connectAndAuthenticate(kind)} type="button">
+                <span className={`walletMark ${kind}`} /> <span>{label}<small>Solana cüzdanıyla devam et</small></span>
+              </button>
+            ) : (
+              <a href={walletInstallUrl(kind)} key={kind} rel="noreferrer" target="_blank">
+                <span className={`walletMark ${kind}`} /> <span>{label}<small>Eklentiyi yükle ↗</small></span>
+              </a>
+            );
+          })}
+        </div>
+      ) : null}
       {wallet.error || authError ? (
         <span className="walletError">{wallet.error ?? authError}</span>
       ) : null}

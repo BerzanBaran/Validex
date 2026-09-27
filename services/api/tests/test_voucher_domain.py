@@ -7,6 +7,8 @@ from app.domain.vouchers import (
     assert_campaign_purchasable,
     assert_voucher_redeemable,
     calculate_payment_split,
+    decrypt_voucher_secret,
+    encrypt_voucher_secret,
     hash_voucher_secret,
 )
 
@@ -29,6 +31,29 @@ def test_voucher_hash_requires_256_bit_secret() -> None:
         hash_voucher_secret(b"too-short")
 
     assert len(hash_voucher_secret(b"x" * 32)) == 32
+
+
+def test_voucher_secret_is_encrypted_and_round_trips() -> None:
+    secret = b"s" * 32
+    encryption_secret = "test-encryption-secret-with-at-least-32-chars"
+
+    ciphertext = encrypt_voucher_secret(secret, encryption_secret)
+
+    assert secret not in ciphertext
+    assert decrypt_voucher_secret(ciphertext, encryption_secret) == secret
+
+
+def test_voucher_secret_cannot_be_decrypted_with_another_key() -> None:
+    ciphertext = encrypt_voucher_secret(
+        b"s" * 32,
+        "first-encryption-secret-with-at-least-32-chars",
+    )
+
+    with pytest.raises(DomainRuleViolation, match="could not be decrypted"):
+        decrypt_voucher_secret(
+            ciphertext,
+            "second-encryption-secret-with-at-least-32-chars",
+        )
 
 
 def test_sold_out_campaign_cannot_be_purchased() -> None:

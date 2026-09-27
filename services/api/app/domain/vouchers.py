@@ -2,6 +2,9 @@ import hashlib
 from dataclasses import dataclass
 from datetime import datetime
 
+from nacl.exceptions import CryptoError
+from nacl.secret import SecretBox
+
 
 class DomainRuleViolation(ValueError):
     """Raised when a marketplace invariant would be broken."""
@@ -32,6 +35,21 @@ def hash_voucher_secret(secret: bytes) -> bytes:
     if len(secret) < 32:
         raise DomainRuleViolation("Voucher secret must contain at least 256 bits of entropy")
     return hashlib.sha256(secret).digest()
+
+
+def encrypt_voucher_secret(secret: bytes, encryption_secret: str) -> bytes:
+    if len(secret) < 32:
+        raise DomainRuleViolation("Voucher secret must contain at least 256 bits of entropy")
+    key = hashlib.sha256(encryption_secret.encode("utf-8")).digest()
+    return bytes(SecretBox(key).encrypt(secret))
+
+
+def decrypt_voucher_secret(ciphertext: bytes, encryption_secret: str) -> bytes:
+    key = hashlib.sha256(encryption_secret.encode("utf-8")).digest()
+    try:
+        return SecretBox(key).decrypt(ciphertext)
+    except CryptoError as error:
+        raise DomainRuleViolation("Voucher secret could not be decrypted") from error
 
 
 def assert_campaign_purchasable(

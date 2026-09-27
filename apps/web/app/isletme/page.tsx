@@ -1,9 +1,15 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { DashboardHeader } from "../../components/DashboardHeader";
 import { CampaignDraft, useMarketplace } from "../../lib/marketplace";
+import {
+  createMerchantApplication,
+  getMyMerchant,
+  MerchantProfile,
+} from "../../lib/merchantApi";
 
 const EMPTY_FORM = {
   merchant: "",
@@ -17,11 +23,30 @@ const EMPTY_FORM = {
   expiresAt: "",
 };
 
+const EMPTY_APPLICATION = { business_name: "", description: "", address: "" };
+
 export default function MerchantDashboard() {
   const marketplace = useMarketplace();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [notice, setNotice] = useState<string | null>(null);
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null | undefined>();
+  const [application, setApplication] = useState(EMPTY_APPLICATION);
+  const [applicationBusy, setApplicationBusy] = useState(false);
+
+  useEffect(() => {
+    if (!walletAddress) {
+      setMerchantProfile(undefined);
+      return;
+    }
+    let active = true;
+    getMyMerchant(walletAddress)
+      .then((profile) => { if (active) setMerchantProfile(profile); })
+      .catch((error) => {
+        if (active) setNotice(error instanceof Error ? error.message : "İşletme bilgisi alınamadı.");
+      });
+    return () => { active = false; };
+  }, [walletAddress]);
 
   const myCampaigns = useMemo(
     () => marketplace.campaigns.filter((campaign) => walletAddress && campaign.ownerWallet === walletAddress),
@@ -41,6 +66,10 @@ export default function MerchantDashboard() {
     event.preventDefault();
     if (!walletAddress) {
       setNotice("Kampanya yayımlamak için önce işletme cüzdanınızı bağlayın.");
+      return;
+    }
+    if (merchantProfile?.verification_status !== "verified") {
+      setNotice("Kampanya yayımlamak için işletme başvurunuzun onaylanması gerekir.");
       return;
     }
     const draft: CampaignDraft = {
@@ -68,6 +97,22 @@ export default function MerchantDashboard() {
     setNotice("Kampanya yayımlandı. Artık müşteri panelinde görülebilir.");
   }
 
+  async function submitApplication(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!walletAddress) return;
+    try {
+      setApplicationBusy(true);
+      const profile = await createMerchantApplication(walletAddress, application);
+      setMerchantProfile(profile);
+      setApplication(EMPTY_APPLICATION);
+      setNotice("İşletme başvurunuz alındı. Yönetici onayından sonra kampanya yayımlayabilirsiniz.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Başvuru oluşturulamadı.");
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
   return (
     <main className="dashboardPage merchantDashboard">
       <DashboardHeader role="merchant" onAddressChange={setWalletAddress} />
@@ -77,10 +122,24 @@ export default function MerchantDashboard() {
           <h1>Kampanyanı oluştur, mahallene ulaş.</h1>
           <p>Kupon fiyatını, stoğunu ve süresini belirle; satışlarını tek ekrandan izle.</p>
         </div>
-        <div className="verificationCard"><span>İŞLETME DURUMU</span><strong>{walletAddress ? "Demo işletme" : "Cüzdan bekleniyor"}</strong><small>Üretimde yönetici doğrulaması zorunlu olacaktır.</small></div>
+        <div className="verificationCard"><span>İŞLETME DURUMU</span><strong>{!walletAddress ? "Cüzdan bekleniyor" : merchantProfile === undefined ? "Kontrol ediliyor…" : merchantProfile === null ? "Başvuru gerekli" : merchantProfile.verification_status === "verified" ? "Onaylı işletme" : merchantProfile.verification_status === "pending" ? "Onay bekleniyor" : "Başvuru reddedildi"}</strong><small>{merchantProfile?.business_name ?? "Kampanya yayımlamak için işletme doğrulaması zorunludur."}</small></div>
       </section>
 
       {notice ? <div className="dashboardShell notice" role="status">{notice}<button onClick={() => setNotice(null)}>×</button></div> : null}
+
+      {walletAddress && merchantProfile === null ? (
+        <section className="dashboardShell onboardingCard">
+          <div><p className="eyebrow">İŞLETME BAŞVURUSU</p><h2>Validex’te işletmeni doğrula.</h2><p>İşletme bilgileri zincire yazılmaz. Yönetici incelemesinden sonra kampanya yayımlama yetkisi cüzdanınıza tanımlanır.</p></div>
+          <form onSubmit={submitApplication}>
+            <label>İşletme adı<input required minLength={2} value={application.business_name} onChange={(event) => setApplication((current) => ({ ...current, business_name: event.target.value }))} /></label>
+            <label>Adres<input required minLength={5} value={application.address} onChange={(event) => setApplication((current) => ({ ...current, address: event.target.value }))} /></label>
+            <label>Açıklama<textarea value={application.description} onChange={(event) => setApplication((current) => ({ ...current, description: event.target.value }))} /></label>
+            <button className="actionButton" disabled={applicationBusy} type="submit">{applicationBusy ? "Gönderiliyor…" : "Başvuruyu gönder"}</button>
+          </form>
+        </section>
+      ) : null}
+
+      {merchantProfile?.verification_status === "pending" ? <div className="dashboardShell approvalState"><span>⌛</span><div><strong>Başvurunuz inceleniyor</strong><p>Onaylandığında kampanya yayımlama alanı etkinleşecektir.</p></div></div> : null}
 
       <section className="dashboardShell metricGrid">
         <div><span>Aktif kampanya</span><strong>{myCampaigns.filter((item) => item.status === "published").length}</strong></div>
@@ -98,7 +157,7 @@ export default function MerchantDashboard() {
           <div className="formRow"><label>Kupon fiyatı (USDC)<input required min="0.01" step="0.01" type="number" value={form.priceUsdc} onChange={(event) => update("priceUsdc", event.target.value)} /></label><label>Normal değer (USDC)<input required min="0.01" step="0.01" type="number" value={form.originalValueUsdc} onChange={(event) => update("originalValueUsdc", event.target.value)} /></label></div>
           <div className="formRow"><label>Stok<input required min="1" type="number" value={form.stock} onChange={(event) => update("stock", event.target.value)} /></label><label>Son kullanım tarihi<input required type="date" value={form.expiresAt} onChange={(event) => update("expiresAt", event.target.value)} /></label></div>
           <div className="feePreview"><span>Platform komisyonu</span><strong>%2</strong><small>Gerçek ödeme escrow programı devreye alındığında kesilir.</small></div>
-          <button className="actionButton" type="submit">Kampanyayı yayımla</button>
+          <button className="actionButton" disabled={merchantProfile?.verification_status !== "verified"} type="submit">Kampanyayı yayımla</button>
         </form>
 
         <div className="merchantCampaigns">
@@ -109,7 +168,7 @@ export default function MerchantDashboard() {
             {myCampaigns.map((campaign) => (
               <article className="manageRow" key={campaign.id}>
                 <div><span className={`statusPill ${campaign.status}`}>{campaign.status === "published" ? "YAYINDA" : "DURAKLATILDI"}</span><h3>{campaign.title}</h3><p>{campaign.priceUsdc} USDC · {campaign.sold}/{campaign.stock} satıldı · {campaign.expiresAt}</p></div>
-                <button onClick={() => marketplace.setCampaignStatus(campaign.id, campaign.status === "published" ? "paused" : "published")} type="button">{campaign.status === "published" ? "Duraklat" : "Yayımla"}</button>
+                <div className="manageActions"><Link href={`/isletme/kampanyalar/${campaign.id}`}>Yönet</Link><button onClick={() => marketplace.setCampaignStatus(campaign.id, campaign.status === "published" ? "paused" : "published")} type="button">{campaign.status === "published" ? "Duraklat" : "Yayımla"}</button></div>
               </article>
             ))}
           </div>

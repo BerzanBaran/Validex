@@ -26,6 +26,9 @@ services:
       VALIDEX_AUTO_CREATE_SCHEMA: "true"
       VALIDEX_CORS_ORIGINS: '["http://localhost:3000"]'
       VALIDEX_JWT_SECRET: ${VALIDEX_JWT_SECRET:-dev-only-change-this-secret-before-production-1234}
+      VALIDEX_ADMIN_WALLETS: ${VALIDEX_ADMIN_WALLETS:-[]}
+      VALIDEX_VOUCHER_ENCRYPTION_SECRET: ${VALIDEX_VOUCHER_ENCRYPTION_SECRET:-dev-only-voucher-encryption-secret-change-me}
+      WATCHFILES_IGNORE_PERMISSION_DENIED: "true"
     ports:
       - "8000:8000"
     depends_on:
@@ -40,6 +43,9 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_SOLANA_NETWORK: devnet
+      NEXT_PUBLIC_SOLANA_RPC_URL: ${NEXT_PUBLIC_SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      NEXT_PUBLIC_USDC_MINT: ${NEXT_PUBLIC_USDC_MINT:-}
+    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev"]
     ports:
       - "3000:3000"
     depends_on:

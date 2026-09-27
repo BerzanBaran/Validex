@@ -3,7 +3,7 @@
 ## Güven sınırları
 
 ```text
-Phantom cüzdanı
+Solflare / Phantom cüzdanı
       │ imzalı işlem / imzalı oturum mesajı
       ▼
 Next.js ───────► FastAPI ───────► PostgreSQL
@@ -13,7 +13,7 @@ Next.js ───────► FastAPI ───────► PostgreSQL
 Solana RPC ◄──── Anchor programı ◄────┘ hash ve adres eşleme
 ```
 
-- Cüzdan anahtarları yalnızca kullanıcının Phantom cüzdanındadır.
+- Cüzdan anahtarları yalnızca kullanıcının Solflare veya Phantom cüzdanındadır.
 - PostgreSQL keşif, raporlama ve şifreli kupon sırrı için kullanılır; ödeme gerçeğinin kaynağı değildir.
 - Solana programı sahiplik, stok, escrow ve tek kullanımlık durumu için nihai kaynaktır.
 - API, `confirmed/finalized` zincir sonucu gelmeden kuponu `active` yapmaz.
@@ -21,7 +21,7 @@ Solana RPC ◄──── Anchor programı ◄────┘ hash ve adres eş
 ## Satın alma atomikliği
 
 1. API rastgele kupon sırrı üretir ve yalnızca hash'i işlem parametresine koyar.
-2. İstemci `purchase_voucher` işlemini Phantom ile imzalar.
+2. İstemci `purchase_voucher` işlemini bağlı Solana cüzdanıyla imzalar.
 3. Program stok ve limitleri kontrol ederek USDC'yi kampanya escrow ATA'sına taşır.
 4. İzleme servisi işlemi doğrular; program ID, hesap adresleri, mint, miktar ve kupon hash'i beklenen değerlerle eşleşmelidir.
 5. Eşleşme ve yeterli kesinlikten sonra off-chain kupon `active` olur.
@@ -44,4 +44,3 @@ merchant   = gross_amount - commission
 ```
 
 Kayan noktalı sayı ödeme yolunda kullanılmaz.
-

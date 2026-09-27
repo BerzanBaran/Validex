@@ -11,11 +11,21 @@
 ## M2 — Cüzdan kimliği (devam ediyor)
 
 - [x] Tek kullanımlık ve kısa ömürlü nonce
-- [x] Phantom ile mesaj imzalama
+- [x] Solflare ve Phantom ile mesaj imzalama
 - [x] Ed25519 doğrulama ve kısa ömürlü erişim tokenı
 - [x] Merchant rolüyle kampanya oluşturma koruması
-- [ ] İşletme başvurusu ve yönetici onay akışı
-- [ ] Yönetici endpoint'leri ve ayrıntılı rol matrisi
+- [x] İşletme başvurusu ve yönetici onay akışı
+- [x] Yönetici işletme onay endpoint'leri ve rol koruması
+- [ ] Ayrıntılı yönetici rol matrisi
+
+## M2.5 — Colosseum ürün demosu (mevcut)
+
+- [x] Kampanya ayrıntı ve kapasite görünümü
+- [x] Cüzdana özel QR kupon ekranı
+- [x] İşletme kampanya yönetimi ve paylaşımı
+- [x] Kamera/yedek kod ile tek kullanımlık kupon doğrulama
+- [x] Solana Devnet RPC üzerinden SOL ve yapılandırılmış USDC bakiye okuma
+- [x] Ön yüz tip kontrolü, QR testleri ve tek komutluk doğrulama
 
 ## M3 — Anchor escrow programı
 
@@ -26,7 +36,8 @@
 
 ## M4 — Zincir entegrasyonu
 
-- Satın alma intent'i ve işlem oluşturma
+- [x] Şifreli kupon sırrı ve `pending_chain` satın alma intent'i
+- [ ] Anchor satın alma işlemi oluşturma
 - RPC kesinlik takipçisi ve idempotent webhook/worker
 - QR üretimi, tarama ve iki katmanlı kullanım doğrulaması
 

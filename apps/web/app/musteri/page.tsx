@@ -1,15 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 import { DashboardHeader } from "../../components/DashboardHeader";
 import { useMarketplace } from "../../lib/marketplace";
+import { useSolanaBalances } from "../../lib/solanaRpc";
 
 export default function CustomerDashboard() {
   const marketplace = useMarketplace();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const balances = useSolanaBalances(walletAddress);
 
   const campaigns = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("tr-TR");
@@ -31,7 +34,7 @@ export default function CustomerDashboard() {
 
   function purchase(campaignId: string) {
     if (!walletAddress) {
-      setNotice("Satın almak için önce Phantom cüzdanınızı bağlayın.");
+      setNotice("Satın almak için önce Solflare veya Phantom cüzdanınızı bağlayın.");
       return;
     }
     try {
@@ -52,9 +55,9 @@ export default function CustomerDashboard() {
           <p>Yerel işletmelerin kuponlarını keşfet, cüzdanınla satın al ve tek kullanımlık kodunu sakla.</p>
         </div>
         <div className="balanceCard">
-          <span>DEVNET USDC BAKİYESİ</span>
-          <strong>{walletAddress ? "—" : "Cüzdan bağlı değil"}</strong>
-          <small>Gerçek bakiye Solana entegrasyonu sonrasında okunacak.</small>
+          <span>DEVNET CÜZDAN BAKİYESİ</span>
+          <strong>{!walletAddress ? "Cüzdan bağlı değil" : balances.status === "loading" ? "Okunuyor…" : balances.usdcBalance === null ? "USDC mint bekleniyor" : `${balances.usdcBalance.toFixed(2)} USDC`}</strong>
+          <small>{balances.status === "error" ? "Solana RPC bağlantısı kurulamadı." : walletAddress && balances.solBalance !== null ? `${balances.solBalance.toFixed(4)} SOL · ${balances.network}` : balances.network}</small>
         </div>
       </section>
 
@@ -83,7 +86,7 @@ export default function CustomerDashboard() {
                 <h3>{campaign.title}</h3>
                 <p className="description">{campaign.description}</p>
                 <div className="stockLine"><span>{campaign.originalValueUsdc} USDC değerinde</span><span>{campaign.stock - campaign.sold} kaldı</span></div>
-                <button className="actionButton" onClick={() => purchase(campaign.id)} type="button">Kuponu satın al</button>
+                <div className="cardActions"><Link className="secondaryButton" href={`/kampanyalar/${campaign.id}`}>Detaylar</Link><button className="actionButton" onClick={() => purchase(campaign.id)} type="button">Hızlı al</button></div>
               </div>
             </article>
           ))}
@@ -94,14 +97,14 @@ export default function CustomerDashboard() {
       <section className="dashboardShell vouchersSection">
         <div className="contentHeading"><div><p className="eyebrow">CÜZDANIM</p><h2>Kuponlarım</h2></div><span>{myVouchers.length} aktif kupon</span></div>
         {!walletAddress ? (
-          <div className="emptyState">Kuponlarınızı görmek için Phantom cüzdanınızı bağlayın.</div>
+          <div className="emptyState">Kuponlarınızı görmek için Solflare veya Phantom cüzdanınızı bağlayın.</div>
         ) : myVouchers.length ? (
           <div className="voucherList">
             {myVouchers.map((voucher) => (
-              <article className="voucherRow" key={voucher.id}>
+              <Link className="voucherRow" href={`/musteri/kuponlar/${voucher.id}`} key={voucher.id}>
                 <div><span className="statusPill">AKTİF</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
                 <div className="voucherCode"><small>TEK KULLANIMLIK KOD</small><strong>{voucher.code}</strong></div>
-              </article>
+              </Link>
             ))}
           </div>
         ) : (

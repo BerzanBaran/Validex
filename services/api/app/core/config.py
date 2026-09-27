@@ -23,11 +23,22 @@ class Settings(BaseSettings):
         min_length=32,
     )
     jwt_issuer: str = "validex-api"
+    admin_wallets: list[str] = Field(default_factory=list)
+    voucher_encryption_secret: str = Field(
+        default="dev-only-voucher-encryption-secret-change-me",
+        min_length=32,
+    )
 
     @model_validator(mode="after")
     def reject_development_secret_in_production(self) -> "Settings":
         if self.environment != "development" and self.jwt_secret.startswith("dev-only-"):
             raise ValueError("VALIDEX_JWT_SECRET must be changed outside development")
+        if self.environment != "development" and self.voucher_encryption_secret.startswith(
+            "dev-only-"
+        ):
+            raise ValueError(
+                "VALIDEX_VOUCHER_ENCRYPTION_SECRET must be changed outside development"
+            )
         return self
 
 

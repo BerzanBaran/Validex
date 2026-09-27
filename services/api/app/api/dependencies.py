@@ -57,3 +57,12 @@ async def require_merchant(current_user: CurrentUserDep) -> User:
 
 
 MerchantUserDep = Annotated[User, Depends(require_merchant)]
+
+
+async def require_admin(current_user: CurrentUserDep) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+    return current_user
+
+
+AdminUserDep = Annotated[User, Depends(require_admin)]
