@@ -9,7 +9,8 @@ mod state;
 
 use contexts::*;
 use error::ValidexError;
-use rules::{assert_purchasable, assert_refundable};
+use math::split_payment;
+use rules::{assert_purchasable, assert_redeemable, assert_refundable};
 use state::*;
 
 declare_id!("F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe");
@@ -168,6 +169,87 @@ pub mod validex {
 
     pub fn cancel_campaign(ctx: Context<CancelCampaign>) -> Result<()> {
         ctx.accounts.campaign.cancelled = true;
+        Ok(())
+    }
+
+    pub fn redeem_voucher(ctx: Context<RedeemVoucher>) -> Result<()> {
+        let campaign = &ctx.accounts.campaign;
+        require!(!campaign.cancelled, ValidexError::CampaignUnavailable);
+        let voucher = &mut ctx.accounts.voucher;
+        assert_redeemable(voucher, Clock::get()?.unix_timestamp)?;
+        let split = split_payment(voucher.price_minor, ctx.accounts.platform.commission_bps)?;
+
+        let campaign_id_bytes = campaign.campaign_id.to_le_bytes();
+        let bump = [campaign.bump];
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            b"campaign",
+            campaign.merchant.as_ref(),
+            &campaign_id_bytes,
+            &bump,
+        ]];
+        if split.commission > 0 {
+            let treasury_before = ctx.accounts.treasury_token.amount;
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.key(),
+                    TransferChecked {
+                        from: ctx.accounts.escrow.to_account_info(),
+                        mint: ctx.accounts.payment_mint.to_account_info(),
+                        to: ctx.accounts.treasury_token.to_account_info(),
+                        authority: campaign.to_account_info(),
+                    },
+                    signer_seeds,
+                ),
+                split.commission,
+                ctx.accounts.payment_mint.decimals,
+            )?;
+            ctx.accounts.treasury_token.reload()?;
+            require_eq!(
+                ctx.accounts
+                    .treasury_token
+                    .amount
+                    .checked_sub(treasury_before)
+                    .ok_or(ValidexError::ArithmeticOverflow)?,
+                split.commission,
+                ValidexError::UnexpectedTransferAmount
+            );
+        }
+
+        // Reload in case treasury and merchant resolve to the same token account.
+        ctx.accounts.merchant_token.reload()?;
+        let merchant_before = ctx.accounts.merchant_token.amount;
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.key(),
+                TransferChecked {
+                    from: ctx.accounts.escrow.to_account_info(),
+                    mint: ctx.accounts.payment_mint.to_account_info(),
+                    to: ctx.accounts.merchant_token.to_account_info(),
+                    authority: campaign.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            split.merchant,
+            ctx.accounts.payment_mint.decimals,
+        )?;
+        ctx.accounts.merchant_token.reload()?;
+        require_eq!(
+            ctx.accounts
+                .merchant_token
+                .amount
+                .checked_sub(merchant_before)
+                .ok_or(ValidexError::ArithmeticOverflow)?,
+            split.merchant,
+            ValidexError::UnexpectedTransferAmount
+        );
+
+        voucher.status = VoucherStatus::Redeemed;
+        emit!(VoucherRedeemed {
+            campaign: campaign.key(),
+            voucher: voucher.key(),
+            merchant_amount: split.merchant,
+            commission_amount: split.commission,
+        });
         Ok(())
     }
 

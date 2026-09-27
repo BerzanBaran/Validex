@@ -191,3 +191,66 @@ pub struct RefundVoucher<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct RedeemVoucher<'info> {
+    pub buyer: Signer<'info>,
+    #[account(mut)]
+    pub merchant_wallet: Signer<'info>,
+    #[account(seeds = [b"platform"], bump = platform.bump)]
+    pub platform: Account<'info, Platform>,
+    #[account(
+        seeds = [b"merchant", merchant_wallet.key().as_ref()],
+        bump = merchant.bump,
+        constraint = merchant.authority == merchant_wallet.key(),
+        constraint = merchant.platform == platform.key(),
+    )]
+    pub merchant: Account<'info, Merchant>,
+    #[account(
+        seeds = [b"campaign", merchant.key().as_ref(), &campaign.campaign_id.to_le_bytes()],
+        bump = campaign.bump,
+        constraint = campaign.merchant == merchant.key(),
+        constraint = campaign.platform == platform.key(),
+    )]
+    pub campaign: Account<'info, Campaign>,
+    #[account(
+        mut,
+        seeds = [b"voucher", campaign.key().as_ref(), voucher.voucher_hash.as_ref()],
+        bump = voucher.bump,
+        constraint = voucher.campaign == campaign.key(),
+        constraint = voucher.buyer == buyer.key(),
+    )]
+    pub voucher: Account<'info, Voucher>,
+    #[account(address = platform.payment_mint)]
+    pub payment_mint: InterfaceAccount<'info, Mint>,
+    #[account(
+        mut,
+        associated_token::mint = payment_mint,
+        associated_token::authority = campaign,
+        associated_token::token_program = token_program,
+    )]
+    pub escrow: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        init_if_needed,
+        payer = merchant_wallet,
+        associated_token::mint = payment_mint,
+        associated_token::authority = merchant_wallet,
+        associated_token::token_program = token_program,
+    )]
+    pub merchant_token: InterfaceAccount<'info, TokenAccount>,
+    /// CHECK: The treasury wallet is pinned by the platform account.
+    #[account(address = platform.treasury)]
+    pub treasury: UncheckedAccount<'info>,
+    #[account(
+        init_if_needed,
+        payer = merchant_wallet,
+        associated_token::mint = payment_mint,
+        associated_token::authority = treasury,
+        associated_token::token_program = token_program,
+    )]
+    pub treasury_token: InterfaceAccount<'info, TokenAccount>,
+    #[account(address = platform.token_program)]
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}

@@ -28,6 +28,15 @@ class CampaignCreate(BaseModel):
         return self
 
 
+class CampaignCreateOnchain(CampaignCreate):
+    onchain_address: str = Field(min_length=32, max_length=44)
+    transaction_signature: str = Field(min_length=64, max_length=88)
+
+
+class CampaignCancellation(BaseModel):
+    transaction_signature: str = Field(min_length=64, max_length=88)
+
+
 class CampaignRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -46,4 +55,6 @@ class CampaignRead(BaseModel):
     expires_at: datetime
     status: CampaignStatus
     onchain_address: str | None
-
+    merchant_wallet: str | None = None
+    merchant_name: str | None = None
+    merchant_address: str | None = None

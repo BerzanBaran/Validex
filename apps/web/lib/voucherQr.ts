@@ -7,6 +7,7 @@ export type VoucherPass = {
   campaignId: string;
   code: string;
   ownerWallet: string;
+  chainVoucher?: string;
 };
 
 const MAX_QR_BYTES = 1024;
@@ -19,6 +20,7 @@ export function encodeVoucherPass(voucher: Voucher): string {
     campaignId: voucher.campaignId,
     code: voucher.code,
     ownerWallet: voucher.ownerWallet,
+    chainVoucher: voucher.chainVoucher,
   } satisfies VoucherPass);
 }
 
@@ -39,7 +41,8 @@ export function decodeVoucherPass(raw: string): VoucherPass {
     !("voucherId" in payload) || typeof payload.voucherId !== "string" ||
     !("campaignId" in payload) || typeof payload.campaignId !== "string" ||
     !("code" in payload) || typeof payload.code !== "string" ||
-    !("ownerWallet" in payload) || typeof payload.ownerWallet !== "string"
+    !("ownerWallet" in payload) || typeof payload.ownerWallet !== "string" ||
+    ("chainVoucher" in payload && payload.chainVoucher !== undefined && typeof payload.chainVoucher !== "string")
   ) {
     throw new Error("Bu QR kodu geçerli bir Validex kuponu değil.");
   }

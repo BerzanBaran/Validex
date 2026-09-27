@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.entities import VoucherStatus
 
@@ -26,3 +26,8 @@ class VoucherRead(BaseModel):
 
 class VoucherPurchaseIntentResponse(VoucherRead):
     price_minor: int
+
+
+class VoucherChainConfirmation(BaseModel):
+    onchain_address: str = Field(min_length=32, max_length=44)
+    transaction_signature: str = Field(min_length=64, max_length=88)

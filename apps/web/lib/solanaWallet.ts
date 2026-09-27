@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Transaction } from "@solana/web3.js";
 
 export type WalletKind = "solflare" | "phantom";
 
@@ -14,6 +15,7 @@ type SolanaProvider = {
   connect(): Promise<{ publicKey?: SolanaPublicKey } | void>;
   disconnect(): Promise<void>;
   signMessage(message: Uint8Array, display?: "utf8"): Promise<{ signature: Uint8Array }>;
+  signTransaction?(transaction: Transaction): Promise<Transaction>;
   on?(event: "accountChanged", callback: (key: SolanaPublicKey | null) => void): void;
   removeListener?(event: "accountChanged", callback: (key: SolanaPublicKey | null) => void): void;
 };
@@ -44,6 +46,15 @@ function preferredWallet(): WalletKind {
   if (typeof window === "undefined") return "solflare";
   const stored = window.localStorage.getItem(PREFERRED_WALLET_KEY);
   return stored === "phantom" ? "phantom" : "solflare";
+}
+
+export async function signSolanaTransaction(transaction: Transaction, expectedAddress: string): Promise<Transaction> {
+  const provider = providerFor(preferredWallet());
+  if (!provider?.publicKey || provider.publicKey.toString() !== expectedAddress) {
+    throw new Error("İşlem için doğru Solflare/Phantom cüzdanını bağlayın.");
+  }
+  if (!provider.signTransaction) throw new Error("Bu cüzdan işlem imzalamayı desteklemiyor.");
+  return provider.signTransaction(transaction);
 }
 
 export function walletInstallUrl(kind: WalletKind): string {
@@ -95,13 +106,13 @@ export function useSolanaWallet() {
   }, [kind]);
 
   const signMessage = useCallback(async (message: string): Promise<string> => {
-    const provider = providerFor(kind);
+    const provider = providerFor(preferredWallet());
     if (!provider) throw new Error("Seçili Solana cüzdanı bulunamadı.");
     const response = await provider.signMessage(new TextEncoder().encode(message), "utf8");
     let binary = "";
     for (const byte of response.signature) binary += String.fromCharCode(byte);
     return window.btoa(binary);
-  }, [kind]);
+  }, []);
 
   const disconnect = useCallback(async () => {
     await providerFor(kind)?.disconnect();

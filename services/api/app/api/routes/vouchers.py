@@ -1,22 +1,33 @@
 import base64
 import secrets
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 
 from app.api.dependencies import CurrentUserDep, SessionDep
 from app.core.config import get_settings
+from app.domain.solana_chain import ChainVerificationError, verify_account_signature, verify_voucher
 from app.domain.vouchers import (
     DomainRuleViolation,
     assert_campaign_purchasable,
+    calculate_payment_split,
     decrypt_voucher_secret,
     encrypt_voucher_secret,
     hash_voucher_secret,
 )
-from app.models.entities import AuditLog, Campaign, CampaignStatus, Voucher, VoucherStatus
+from app.models.entities import (
+    AuditLog,
+    Campaign,
+    CampaignStatus,
+    Transaction,
+    TransactionStatus,
+    Voucher,
+    VoucherStatus,
+)
 from app.schemas.vouchers import (
+    VoucherChainConfirmation,
     VoucherPurchaseIntent,
     VoucherPurchaseIntentResponse,
     VoucherRead,
@@ -24,7 +35,7 @@ from app.schemas.vouchers import (
 
 router = APIRouter(prefix="/vouchers", tags=["vouchers"])
 settings = get_settings()
-RESERVING_STATUSES = (VoucherStatus.PENDING_CHAIN, VoucherStatus.ACTIVE)
+PENDING_RESERVATION_MINUTES = 15
 
 
 def voucher_response(voucher: Voucher, *, price_minor: int | None = None) -> VoucherRead:
@@ -64,20 +75,30 @@ async def create_purchase_intent(
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
+    now = datetime.now(UTC)
+    pending_cutoff = now - timedelta(minutes=PENDING_RESERVATION_MINUTES)
     buyer_count = await session.scalar(
         select(func.count(Voucher.id)).where(
             Voucher.campaign_id == campaign.id,
             Voucher.owner_user_id == current_user.id,
-            Voucher.status.in_(RESERVING_STATUSES),
+            or_(
+                Voucher.status.in_(
+                    (VoucherStatus.ACTIVE, VoucherStatus.REDEEMED, VoucherStatus.REFUNDED)
+                ),
+                and_(
+                    Voucher.status == VoucherStatus.PENDING_CHAIN,
+                    Voucher.created_at >= pending_cutoff,
+                ),
+            ),
         )
     )
     pending_count = await session.scalar(
         select(func.count(Voucher.id)).where(
             Voucher.campaign_id == campaign.id,
             Voucher.status == VoucherStatus.PENDING_CHAIN,
+            Voucher.created_at >= pending_cutoff,
         )
     )
-    now = datetime.now(UTC)
     try:
         assert_campaign_purchasable(
             now=now,
@@ -114,6 +135,182 @@ async def create_purchase_intent(
     await session.commit()
     await session.refresh(voucher)
     return voucher_response(voucher, price_minor=campaign.price_minor)
+
+
+@router.post("/{voucher_id}/confirm", response_model=VoucherRead)
+async def confirm_purchase(
+    voucher_id: uuid.UUID,
+    payload: VoucherChainConfirmation,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> VoucherRead:
+    voucher = await session.scalar(
+        select(Voucher).where(Voucher.id == voucher_id).with_for_update()
+    )
+    if voucher is None or voucher.owner_user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Voucher not found")
+    if (
+        voucher.status == VoucherStatus.ACTIVE
+        and voucher.onchain_address == payload.onchain_address
+    ):
+        return voucher_response(voucher)
+    if voucher.status != VoucherStatus.PENDING_CHAIN:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Voucher is not pending")
+    campaign = await session.scalar(
+        select(Campaign).where(Campaign.id == voucher.campaign_id).with_for_update()
+    )
+    if campaign is None or not campaign.onchain_address:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Campaign has no on-chain account"
+        )
+    try:
+        await verify_voucher(
+            address=payload.onchain_address,
+            campaign_address=campaign.onchain_address,
+            buyer_wallet=current_user.wallet_address,
+            voucher_hash=voucher.voucher_hash,
+            expected_status=0,
+        )
+        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+    except ChainVerificationError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    voucher.onchain_address = payload.onchain_address
+    voucher.status = VoucherStatus.ACTIVE
+    voucher.purchased_at = datetime.now(UTC)
+    campaign.sold_count += 1
+    session.add(
+        Transaction(
+            signature=payload.transaction_signature,
+            type="purchase",
+            user_id=current_user.id,
+            campaign_id=campaign.id,
+            voucher_id=voucher.id,
+            gross_amount=campaign.price_minor,
+            status=TransactionStatus.CONFIRMED,
+            confirmed_at=datetime.now(UTC),
+        )
+    )
+    session.add(
+        AuditLog(
+            actor_id=current_user.id,
+            action="voucher.purchase_confirmed",
+            entity_type="voucher",
+            entity_id=str(voucher.id),
+        )
+    )
+    await session.commit()
+    await session.refresh(voucher)
+    return voucher_response(voucher)
+
+
+@router.post("/{voucher_id}/redeem-confirm", response_model=VoucherRead)
+async def confirm_redemption(
+    voucher_id: uuid.UUID,
+    payload: VoucherChainConfirmation,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> VoucherRead:
+    voucher = await session.scalar(
+        select(Voucher).where(Voucher.id == voucher_id).with_for_update()
+    )
+    if voucher is None or voucher.owner_user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Voucher not found")
+    if (
+        voucher.status == VoucherStatus.REDEEMED
+        and voucher.onchain_address == payload.onchain_address
+    ):
+        return voucher_response(voucher)
+    if voucher.status != VoucherStatus.ACTIVE or voucher.onchain_address != payload.onchain_address:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Voucher is not active")
+    campaign = await session.get(Campaign, voucher.campaign_id)
+    if campaign is None or not campaign.onchain_address:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Campaign has no on-chain account"
+        )
+    try:
+        await verify_voucher(
+            address=payload.onchain_address,
+            campaign_address=campaign.onchain_address,
+            buyer_wallet=current_user.wallet_address,
+            voucher_hash=voucher.voucher_hash,
+            expected_status=1,
+        )
+        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+    except ChainVerificationError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    split = calculate_payment_split(campaign.price_minor, 200)
+    voucher.status = VoucherStatus.REDEEMED
+    voucher.redeemed_at = datetime.now(UTC)
+    session.add(
+        Transaction(
+            signature=payload.transaction_signature,
+            type="redeem",
+            user_id=current_user.id,
+            campaign_id=campaign.id,
+            voucher_id=voucher.id,
+            gross_amount=split.gross_amount,
+            commission_amount=split.commission_amount,
+            merchant_amount=split.merchant_amount,
+            status=TransactionStatus.CONFIRMED,
+            confirmed_at=datetime.now(UTC),
+        )
+    )
+    await session.commit()
+    await session.refresh(voucher)
+    return voucher_response(voucher)
+
+
+@router.post("/{voucher_id}/refund-confirm", response_model=VoucherRead)
+async def confirm_refund(
+    voucher_id: uuid.UUID,
+    payload: VoucherChainConfirmation,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> VoucherRead:
+    voucher = await session.scalar(
+        select(Voucher).where(Voucher.id == voucher_id).with_for_update()
+    )
+    if voucher is None or voucher.owner_user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Voucher not found")
+    if (
+        voucher.status == VoucherStatus.REFUNDED
+        and voucher.onchain_address == payload.onchain_address
+    ):
+        return voucher_response(voucher)
+    if voucher.status != VoucherStatus.ACTIVE or voucher.onchain_address != payload.onchain_address:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Voucher is not active")
+    campaign = await session.get(Campaign, voucher.campaign_id)
+    if campaign is None or not campaign.onchain_address:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Campaign has no on-chain account"
+        )
+    try:
+        await verify_voucher(
+            address=payload.onchain_address,
+            campaign_address=campaign.onchain_address,
+            buyer_wallet=current_user.wallet_address,
+            voucher_hash=voucher.voucher_hash,
+            expected_status=2,
+        )
+        await verify_account_signature(payload.onchain_address, payload.transaction_signature)
+    except ChainVerificationError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    voucher.status = VoucherStatus.REFUNDED
+    session.add(
+        Transaction(
+            signature=payload.transaction_signature,
+            type="refund",
+            user_id=current_user.id,
+            campaign_id=campaign.id,
+            voucher_id=voucher.id,
+            gross_amount=campaign.price_minor,
+            status=TransactionStatus.CONFIRMED,
+            confirmed_at=datetime.now(UTC),
+        )
+    )
+    await session.commit()
+    await session.refresh(voucher)
+    return voucher_response(voucher)
 
 
 @router.get("/my", response_model=list[VoucherRead])

@@ -10,6 +10,7 @@ import { ShareDialog } from "../../../components/ui/ShareDialog";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { TransactionFeedback, TransactionPhase } from "../../../components/ui/TransactionFeedback";
 import { useMarketplace } from "../../../lib/marketplace";
+import { chainConfigured } from "../../../lib/validexChain";
 
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,8 +31,7 @@ export default function CampaignDetailPage() {
     setPhase("preparing");
     setMessage(undefined);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 450));
-      const voucher = marketplace.purchaseCampaign(id, walletAddress);
+      const voucher = await marketplace.purchaseCampaign(id, walletAddress);
       setPhase("confirmed");
       window.setTimeout(() => router.push(`/musteri/kuponlar/${voucher.id}`), 650);
     } catch (error) {
@@ -45,7 +45,8 @@ export default function CampaignDetailPage() {
 
   const expired = new Date(campaign.expiresAt).getTime() <= Date.now();
   const soldOut = campaign.sold >= campaign.stock;
-  const available = campaign.status === "published" && !expired && !soldOut;
+  const available = campaign.status === "published" && !expired && !soldOut &&
+    chainConfigured() && Boolean(campaign.chainCampaign);
   const discount = Math.round((1 - campaign.priceUsdc / campaign.originalValueUsdc) * 100);
   const shareUrl = typeof window === "undefined" ? "" : window.location.href;
 
@@ -66,9 +67,9 @@ export default function CampaignDetailPage() {
           <CapacityMeter sold={campaign.sold} stock={campaign.stock} />
           <TransactionFeedback phase={phase} message={message} />
           <button className="actionButton detailPurchase" disabled={!available || phase === "preparing"} onClick={() => void purchase()} type="button">
-            {phase === "preparing" ? "Hazırlanıyor…" : available ? "Kuponu satın al" : "Şu anda satın alınamaz"}
+            {phase === "preparing" ? "Cüzdan onayı bekleniyor…" : available ? "USDC ile satın al" : "Zincir ödemesi henüz kapalı"}
           </button>
-          <p className="chainDisclosure">Demo aşamasında USDC transferi yapılmaz. Anchor escrow etkinleştirildiğinde işlem cüzdan onayı gerektirecektir.</p>
+          <p className="chainDisclosure">{available ? "Cüzdanınız işlemi imzalar; kupon ancak USDC escrow'a ulaşıp zincirde onaylanınca etkinleşir." : "Bu kampanya zincire bağlı değil veya ödeme yapılandırması eksik. USDC tahsil edilmez."}</p>
         </div>
       </section>
       <section className="dashboardShell detailInfoGrid">

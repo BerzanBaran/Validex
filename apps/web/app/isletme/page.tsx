@@ -10,6 +10,11 @@ import {
   getMyMerchant,
   MerchantProfile,
 } from "../../lib/merchantApi";
+import {
+  accountExists, chainConfigured, createCampaignInstruction, hashCampaignMetadata, loadChain,
+  merchantPda, randomCampaignId, sendWalletTransaction, usdcMinor,
+} from "../../lib/validexChain";
+import { publishOnchainCampaign } from "../../lib/campaignApi";
 
 const EMPTY_FORM = {
   merchant: "",
@@ -33,6 +38,7 @@ export default function MerchantDashboard() {
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null | undefined>();
   const [application, setApplication] = useState(EMPTY_APPLICATION);
   const [applicationBusy, setApplicationBusy] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     if (!walletAddress) {
@@ -62,7 +68,7 @@ export default function MerchantDashboard() {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!walletAddress) {
       setNotice("Kampanya yayımlamak için önce işletme cüzdanınızı bağlayın.");
@@ -70,6 +76,10 @@ export default function MerchantDashboard() {
     }
     if (merchantProfile?.verification_status !== "verified") {
       setNotice("Kampanya yayımlamak için işletme başvurunuzun onaylanması gerekir.");
+      return;
+    }
+    if (!chainConfigured()) {
+      setNotice("Program ve USDC mint ayarlanana kadar gerçek kampanya yayımlanamaz.");
       return;
     }
     const draft: CampaignDraft = {
@@ -92,9 +102,39 @@ export default function MerchantDashboard() {
       setNotice("Son kullanım tarihi gelecekte olmalıdır.");
       return;
     }
-    marketplace.createCampaign(draft);
-    setForm(EMPTY_FORM);
-    setNotice("Kampanya yayımlandı. Artık müşteri panelinde görülebilir.");
+    try {
+      setPublishing(true);
+      const config = await loadChain();
+      if (!await accountExists(config, merchantPda(config, walletAddress))) {
+        throw new Error("İşletmeniz henüz zincirde yönetici tarafından kaydedilmemiş.");
+      }
+      const campaignId = randomCampaignId();
+      const startsAt = Math.floor(Date.now() / 1000);
+      const expiresAt = Math.floor(new Date(draft.expiresAt).getTime() / 1000);
+      const priceMinor = usdcMinor(draft.priceUsdc);
+      const metadataHash = await hashCampaignMetadata([
+        walletAddress, draft.title, draft.description, Number(priceMinor),
+        Number(usdcMinor(draft.originalValueUsdc)), draft.stock, 1, startsAt, expiresAt,
+      ]);
+      const { instruction, campaign } = await createCampaignInstruction(config, {
+        merchantWallet: walletAddress, campaignId, metadataHash,
+        priceMinor, stock: draft.stock, perUserLimit: 1,
+        startsAt: BigInt(startsAt), expiresAt: BigInt(expiresAt),
+      });
+      const signature = await sendWalletTransaction(config, walletAddress, instruction, campaign);
+      const published = await publishOnchainCampaign({
+        walletAddress, merchantId: merchantProfile.id, draft,
+        campaignAddress: campaign.toBase58(), chainId: campaignId.toString(), signature,
+        startsAt, expiresAt,
+      });
+      marketplace.saveCampaign(published);
+      setForm(EMPTY_FORM);
+      setNotice("Kampanya zincirde onaylandı ve yayımlandı.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Kampanya zincirde oluşturulamadı.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   async function submitApplication(event: FormEvent<HTMLFormElement>) {
@@ -144,7 +184,7 @@ export default function MerchantDashboard() {
       <section className="dashboardShell metricGrid">
         <div><span>Aktif kampanya</span><strong>{myCampaigns.filter((item) => item.status === "published").length}</strong></div>
         <div><span>Satılan kupon</span><strong>{totalSales}</strong></div>
-        <div><span>Brüt demo geliri</span><strong>{grossRevenue.toFixed(2)} USDC</strong></div>
+        <div><span>Brüt satış tutarı (escrow dahil)</span><strong>{grossRevenue.toFixed(2)} USDC</strong></div>
       </section>
 
       <section className="dashboardShell merchantWorkspace">
@@ -156,8 +196,8 @@ export default function MerchantDashboard() {
           <div className="formRow"><label>Semt<input required value={form.area} onChange={(event) => update("area", event.target.value)} placeholder="Kadıköy" /></label><label>Kategori<select value={form.category} onChange={(event) => update("category", event.target.value)}><option>Kafe</option><option>Kahve</option><option>Kahvaltı</option><option>Restoran</option></select></label></div>
           <div className="formRow"><label>Kupon fiyatı (USDC)<input required min="0.01" step="0.01" type="number" value={form.priceUsdc} onChange={(event) => update("priceUsdc", event.target.value)} /></label><label>Normal değer (USDC)<input required min="0.01" step="0.01" type="number" value={form.originalValueUsdc} onChange={(event) => update("originalValueUsdc", event.target.value)} /></label></div>
           <div className="formRow"><label>Stok<input required min="1" type="number" value={form.stock} onChange={(event) => update("stock", event.target.value)} /></label><label>Son kullanım tarihi<input required type="date" value={form.expiresAt} onChange={(event) => update("expiresAt", event.target.value)} /></label></div>
-          <div className="feePreview"><span>Platform komisyonu</span><strong>%2</strong><small>Gerçek ödeme escrow programı devreye alındığında kesilir.</small></div>
-          <button className="actionButton" disabled={merchantProfile?.verification_status !== "verified"} type="submit">Kampanyayı yayımla</button>
+          <div className="feePreview"><span>Platform komisyonu</span><strong>%2</strong><small>Kupon iki tarafça kullanıldığında escrow'dan kesilir.</small></div>
+          <button className="actionButton" disabled={merchantProfile?.verification_status !== "verified" || !chainConfigured() || publishing} type="submit">{publishing ? "Cüzdan ve zincir onayı bekleniyor…" : "Kampanyayı zincirde yayımla"}</button>
         </form>
 
         <div className="merchantCampaigns">
@@ -167,15 +207,15 @@ export default function MerchantDashboard() {
           <div className="manageList">
             {myCampaigns.map((campaign) => (
               <article className="manageRow" key={campaign.id}>
-                <div><span className={`statusPill ${campaign.status}`}>{campaign.status === "published" ? "YAYINDA" : "DURAKLATILDI"}</span><h3>{campaign.title}</h3><p>{campaign.priceUsdc} USDC · {campaign.sold}/{campaign.stock} satıldı · {campaign.expiresAt}</p></div>
-                <div className="manageActions"><Link href={`/isletme/kampanyalar/${campaign.id}`}>Yönet</Link><button onClick={() => marketplace.setCampaignStatus(campaign.id, campaign.status === "published" ? "paused" : "published")} type="button">{campaign.status === "published" ? "Duraklat" : "Yayımla"}</button></div>
+                <div><span className={`statusPill ${campaign.status}`}>{campaign.status === "published" ? "YAYINDA" : campaign.status === "cancelled" ? "İPTAL EDİLDİ" : "KAPALI"}</span><h3>{campaign.title}</h3><p>{campaign.priceUsdc} USDC · {campaign.sold}/{campaign.stock} satıldı · {campaign.expiresAt}</p></div>
+                <div className="manageActions"><Link href={`/isletme/kampanyalar/${campaign.id}`}>Yönet / iptal et</Link></div>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="demoBanner">Demo modu: Kampanyalar tarayıcıda saklanır; zincir işlemi oluşturulmaz.</div>
+      <div className="demoBanner">{chainConfigured() ? "Yayımlama için işletme cüzdanı imzası ve zincir onayı gerekir. Liste bilgileri bu tarayıcıda saklanır." : "Zincir modu kapalı: Yönetici adresi, program ve USDC mint kurulmadan kampanya yayımlanamaz."}</div>
     </main>
   );
 }

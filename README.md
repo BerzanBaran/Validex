@@ -52,11 +52,11 @@ Yerel Python 3.14 desteklenir; tekrarlanabilir geliştirme ve CI ortamı için D
 
 ## Güvenlik sınırı
 
-Validex hiçbir kullanıcı veya işletme private key/seed phrase bilgisini almaz. QR içeriğinde yalnızca yüksek entropili, tek kullanımlık bir sır taşınır; zincire bunun SHA-256 özeti yazılır.
+Validex hiçbir kullanıcı veya işletme private key/seed phrase bilgisini almaz. API yüksek entropili kupon sırrını şifreli saklar; zincire yalnızca SHA-256 özeti yazılır. QR, zincirdeki kupon adresini taşır. Kullanım için müşteri ve işletme cüzdanlarının ikisi de aynı işlemi imzalar; sır zincire açıklanmaz.
 
-## Arayüz demo akışı
+## Zincir ödeme akışı
 
-İşletme panelinden oluşturulan kampanyalar tarayıcının yerel deposuna kaydedilir ve müşteri panelinde hemen görünür. Müşteri panelindeki demo satın alma stok düşürür ve kuponu ilgili cüzdanın “Kuponlarım” alanına ekler. Bu akış ürün arayüzünü doğrulamak içindir; Anchor escrow programı tamamlanana kadar gerçek USDC transferi yapmaz.
+Kampanya ve kupon kayıtları API'de tutulur; tarayıcı yerel deposu yalnızca arayüz önbelleğidir. İşletme kampanyayı cüzdanıyla zincirde oluşturup API'ye doğrulatır. Müşteri önce kupon niyeti oluşturur, sonra Solflare/Phantom ile USDC'yi kampanya escrow kasasına gönderir. Kupon yalnızca zincir hesabı ve işlem imzası doğrulandıktan sonra aktifleşir. Eski örnek kampanyalar ödeme kabul etmez. Devnet kurulumu tamamlanana kadar tüm zincir işlem düğmeleri kapalıdır.
 
 ## Cüzdanla giriş
 
@@ -90,7 +90,9 @@ cd apps/web
 npm run verify
 ```
 
-Uygulama ağı `NEXT_PUBLIC_SOLANA_RPC_URL` üzerinden Solana Devnet olarak sabitlenir. Demo USDC mint adresi `NEXT_PUBLIC_USDC_MINT` ile verilir. Freighter, Stellar WalletConnect, Horizon, trustline, XLM ve no-show sözleşmeleri Validex mimarisinin parçası değildir.
+Uygulama ağı `NEXT_PUBLIC_SOLANA_RPC_URL` üzerinden Solana Devnet olarak sabitlenir. Gerçek işlem kodu eklendi, ancak yönetici adresi ve devnet USDC mint adresi henüz verilmediği ve Anchor programı dağıtılmadığı için ödeme düğmeleri kapalıdır. Freighter, Stellar WalletConnect, Horizon, trustline, XLM ve no-show sözleşmeleri Validex mimarisinin parçası değildir.
+
+Dağıtımdan sonra aynı program ID, RPC ve mint değerlerini web (`NEXT_PUBLIC_VALIDEX_PROGRAM_ID`, `NEXT_PUBLIC_SOLANA_RPC_URL`, `NEXT_PUBLIC_USDC_MINT`) ve API (`VALIDEX_SOLANA_PROGRAM_ID`, `VALIDEX_SOLANA_RPC_URL`, `VALIDEX_USDC_MINT`) ortamlarına yazın. İşletme başvurusu yönetici cüzdanıyla zincirde kaydedilir; işletme kampanyayı zincirde yayımlar, müşteri USDC'yi escrow'a gönderir. Kupon kullanımında işletme imzalı işlem metnini müşteriye iletir; müşteri ikinci imzayla işlemi tamamlar. Escrow aynı atomik işlemde işletmeye `%98`, platforma `%2` öder. İptal veya süre sonunda kullanılmamış kupon sahibi iade talep edebilir. Zincir onayı belirsizse yeniden ödeme yapmadan önce kupon durumunu kontrol edin.
 
 ## İşletme ve yönetici akışı
 

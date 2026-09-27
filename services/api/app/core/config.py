@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     )
     jwt_issuer: str = "validex-api"
     admin_wallets: list[str] = Field(default_factory=list)
+    solana_rpc_url: str = "https://api.devnet.solana.com"
+    solana_program_id: str = ""
+    usdc_mint: str = ""
     voucher_encryption_secret: str = Field(
         default="dev-only-voucher-encryption-secret-change-me",
         min_length=32,

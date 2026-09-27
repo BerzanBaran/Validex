@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { listOnchainCampaigns } from "./campaignApi";
+import {
+  bytesFromHex, chainConfigured, loadChain, purchaseInstruction,
+  sendWalletTransaction, usdcMinor,
+} from "./validexChain";
+import { ApiVoucher, confirmVoucherPurchase, createPurchaseIntent, listMyVouchers } from "./voucherApi";
 
 export type Campaign = {
   id: string;
@@ -15,8 +21,10 @@ export type Campaign = {
   stock: number;
   sold: number;
   expiresAt: string;
-  status: "published" | "paused";
+  status: "published" | "paused" | "cancelled";
   accent: "coffee" | "berry" | "lime" | "ocean";
+  chainCampaign?: string;
+  chainId?: string;
 };
 
 export type Voucher = {
@@ -29,8 +37,10 @@ export type Voucher = {
   purchasedAt: string;
   expiresAt: string;
   code: string;
-  status: "active" | "redeemed";
+  status: "pending" | "active" | "redeemed" | "refunded";
   redeemedAt?: string;
+  chainVoucher?: string;
+  transactionSignature?: string;
 };
 
 export type CampaignDraft = Omit<Campaign, "id" | "sold" | "status" | "accent">;
@@ -109,12 +119,18 @@ export function useMarketplace() {
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(() => {
-    setCampaigns(readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS));
+    setCampaigns(readStorage(CAMPAIGNS_KEY, chainConfigured() ? [] : DEFAULT_CAMPAIGNS));
     setVouchers(readStorage(VOUCHERS_KEY, []));
   }, []);
 
   useEffect(() => {
     refresh();
+    if (chainConfigured()) {
+      void listOnchainCampaigns().then((items) => {
+        setCampaigns(items);
+        writeStorage(CAMPAIGNS_KEY, items);
+      }).catch(() => { setCampaigns([]); });
+    }
     setReady(true);
     const onStorage = (event: StorageEvent) => {
       if (event.key === CAMPAIGNS_KEY || event.key === VOUCHERS_KEY) refresh();
@@ -123,23 +139,14 @@ export function useMarketplace() {
     return () => window.removeEventListener("storage", onStorage);
   }, [refresh]);
 
-  const createCampaign = useCallback((draft: CampaignDraft) => {
-    const current = readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS);
-    const accents: Campaign["accent"][] = ["coffee", "berry", "lime", "ocean"];
-    const campaign: Campaign = {
-      ...draft,
-      id: crypto.randomUUID(),
-      sold: 0,
-      status: "published",
-      accent: accents[current.length % accents.length],
-    };
-    const next = [campaign, ...current];
-    setCampaigns(next);
+  const saveCampaign = useCallback((campaign: Campaign) => {
+    const current = readStorage<Campaign[]>(CAMPAIGNS_KEY, []);
+    const next = [campaign, ...current.filter((item) => item.id !== campaign.id)];
     writeStorage(CAMPAIGNS_KEY, next);
-    return campaign;
+    setCampaigns(next);
   }, []);
 
-  const purchaseCampaign = useCallback((campaignId: string, ownerWallet: string) => {
+  const purchaseCampaign = useCallback(async (campaignId: string, ownerWallet: string) => {
     const currentCampaigns = readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS);
     const campaign = currentCampaigns.find((item) => item.id === campaignId);
     if (!campaign || campaign.status !== "published") {
@@ -151,23 +158,35 @@ export function useMarketplace() {
     if (campaign.ownerWallet === ownerWallet) {
       throw new Error("Kendi işletmenizin kuponunu satın alamazsınız.");
     }
+    if (!chainConfigured() || !campaign.chainCampaign) {
+      throw new Error("Bu kampanya yalnızca ön izleme. Zincir ödemesi kurulmadan USDC tahsil edilmez.");
+    }
     const currentVouchers = readStorage<Voucher[]>(VOUCHERS_KEY, []);
-    if (
-      currentVouchers.some(
-        (voucher) =>
-          voucher.campaignId === campaignId &&
-          voucher.ownerWallet === ownerWallet &&
-          voucher.status === "active",
-      )
-    ) {
+    if (currentVouchers.some((voucher) => voucher.campaignId === campaignId &&
+      voucher.ownerWallet === ownerWallet && voucher.status === "active")) {
       throw new Error("Bu kampanya için zaten aktif bir kuponunuz var.");
     }
-
-    const nextCampaigns = currentCampaigns.map((item) =>
-      item.id === campaignId ? { ...item, sold: item.sold + 1 } : item,
-    );
+    const config = await loadChain();
+    const pendingApi = (await listMyVouchers(ownerWallet)).find((item) => item.campaign_id === campaignId && item.status === "pending_chain");
+    const intent = pendingApi ?? await createPurchaseIntent(campaignId, ownerWallet);
+    const voucherHash = bytesFromHex(intent.voucher_hash_hex);
+    const { instruction, voucher: voucherPda, priceMinor } = await purchaseInstruction(config, ownerWallet, campaign.chainCampaign, voucherHash);
+    if (priceMinor !== usdcMinor(campaign.priceUsdc)) {
+      throw new Error("Ekrandaki fiyat zincirdeki kampanya fiyatıyla eşleşmiyor. Ödeme durduruldu.");
+    }
+    const existing = currentVouchers.find((item) => item.id === intent.id);
+    if (existing?.transactionSignature) {
+      const confirmedApi = await confirmVoucherPurchase(intent.id, ownerWallet, voucherPda.toBase58(), existing.transactionSignature);
+      if (confirmedApi.status === "active") {
+        const recovered: Voucher = { ...existing, status: "active" };
+        const next = [recovered, ...currentVouchers.filter((item) => item.id !== existing.id)];
+        writeStorage(VOUCHERS_KEY, next);
+        setVouchers(next);
+        return recovered;
+      }
+    }
     const voucher: Voucher = {
-      id: crypto.randomUUID(),
+      id: intent.id,
       campaignId: campaign.id,
       ownerWallet,
       merchant: campaign.merchant,
@@ -175,46 +194,84 @@ export function useMarketplace() {
       priceUsdc: campaign.priceUsdc,
       purchasedAt: new Date().toISOString(),
       expiresAt: campaign.expiresAt,
-      code: `VLDX-${crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`,
-      status: "active",
+      code: `VLDX-${intent.voucher_hash_hex.slice(0, 12).toUpperCase()}`,
+      status: "pending",
+      chainVoucher: voucherPda.toBase58(),
     };
-
-    const nextVouchers = [voucher, ...currentVouchers];
-    setCampaigns(nextCampaigns);
-    setVouchers(nextVouchers);
-    writeStorage(CAMPAIGNS_KEY, nextCampaigns);
+    const currentWithoutStale = currentVouchers.filter((item) => item.id !== voucher.id);
+    const pendingVouchers = [voucher, ...currentWithoutStale];
+    writeStorage(VOUCHERS_KEY, pendingVouchers);
+    setVouchers(pendingVouchers);
+    const signature = await sendWalletTransaction(config, ownerWallet, instruction, voucherPda, (submitted) => {
+      const submittedVoucher = { ...voucher, transactionSignature: submitted };
+      writeStorage(VOUCHERS_KEY, [submittedVoucher, ...currentWithoutStale]);
+      setVouchers([submittedVoucher, ...currentWithoutStale]);
+    });
+    await confirmVoucherPurchase(intent.id, ownerWallet, voucherPda.toBase58(), signature);
+    const confirmed: Voucher = { ...voucher, status: "active", transactionSignature: signature };
+    const nextVouchers = [confirmed, ...currentWithoutStale];
+    const nextCampaigns = currentCampaigns.map((item) => item.id === campaignId ? { ...item, sold: item.sold + 1 } : item);
     writeStorage(VOUCHERS_KEY, nextVouchers);
-    return voucher;
+    writeStorage(CAMPAIGNS_KEY, nextCampaigns);
+    setVouchers(nextVouchers);
+    setCampaigns(nextCampaigns);
+    return confirmed;
   }, []);
 
-  const setCampaignStatus = useCallback((campaignId: string, status: Campaign["status"]) => {
-    const current = readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS);
-    const next = current.map((item) => (item.id === campaignId ? { ...item, status } : item));
-    setCampaigns(next);
-    writeStorage(CAMPAIGNS_KEY, next);
+  const syncMyVouchers = useCallback(async (walletAddress: string) => {
+    const remote = await listMyVouchers(walletAddress);
+    const current = readStorage<Voucher[]>(VOUCHERS_KEY, []);
+    const currentCampaigns = readStorage<Campaign[]>(CAMPAIGNS_KEY, []);
+    const mapped = remote.map((item: ApiVoucher): Voucher => {
+      const campaign = currentCampaigns.find((entry) => entry.id === item.campaign_id);
+      const local = current.find((entry) => entry.id === item.id);
+      return {
+        id: item.id, campaignId: item.campaign_id, ownerWallet: walletAddress,
+        merchant: campaign?.merchant ?? local?.merchant ?? "İşletme",
+        title: campaign?.title ?? local?.title ?? "Kupon",
+        priceUsdc: campaign?.priceUsdc ?? local?.priceUsdc ?? 0,
+        purchasedAt: item.purchased_at ?? local?.purchasedAt ?? new Date().toISOString(),
+        expiresAt: item.expires_at,
+        code: `VLDX-${item.voucher_hash_hex.slice(0, 12).toUpperCase()}`,
+        status: item.status === "redeemed" ? "redeemed" : item.status === "refunded" ? "refunded" : item.status === "active" ? "active" : "pending",
+        chainVoucher: item.onchain_address ?? local?.chainVoucher,
+        transactionSignature: local?.transactionSignature,
+        redeemedAt: local?.redeemedAt,
+      };
+    });
+    const next = [...mapped, ...current.filter((item) => item.ownerWallet !== walletAddress)];
+    writeStorage(VOUCHERS_KEY, next);
+    setVouchers(next);
   }, []);
 
-  const redeemVoucher = useCallback((code: string, merchantWallet: string, campaignId?: string) => {
+  const markRedeemed = useCallback((voucherId: string, signature: string) => {
     const currentVouchers = readStorage<Voucher[]>(VOUCHERS_KEY, []);
-    const currentCampaigns = readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS);
-    const voucher = currentVouchers.find((item) => item.code === code);
-    if (!voucher) throw new Error("Kupon bulunamadı veya QR içeriği geçersiz.");
-    if (campaignId && voucher.campaignId !== campaignId) {
-      throw new Error("Bu kupon seçili kampanyaya ait değil.");
-    }
-    const campaign = currentCampaigns.find((item) => item.id === voucher.campaignId);
-    if (!campaign || campaign.ownerWallet !== merchantWallet) {
-      throw new Error("Bu kuponu doğrulama yetkiniz yok.");
-    }
-    if (voucher.status === "redeemed") throw new Error("Bu kupon daha önce kullanılmış.");
-    if (new Date(voucher.expiresAt).getTime() <= Date.now()) throw new Error("Bu kuponun süresi dolmuş.");
-
-    const redeemed: Voucher = { ...voucher, status: "redeemed", redeemedAt: new Date().toISOString() };
-    const next = currentVouchers.map((item) => item.id === voucher.id ? redeemed : item);
+    const next = currentVouchers.map((item) => item.id === voucherId ?
+      { ...item, status: "redeemed" as const, redeemedAt: new Date().toISOString(), transactionSignature: signature } : item);
     setVouchers(next);
     writeStorage(VOUCHERS_KEY, next);
-    return redeemed;
   }, []);
 
-  return { campaigns, vouchers, ready, createCampaign, purchaseCampaign, setCampaignStatus, redeemVoucher };
+  const markRefunded = useCallback((voucherId: string, signature: string) => {
+    const current = readStorage<Voucher[]>(VOUCHERS_KEY, []);
+    const next = current.map((item) => item.id === voucherId ?
+      { ...item, status: "refunded" as const, transactionSignature: signature } : item);
+    writeStorage(VOUCHERS_KEY, next);
+    setVouchers(next);
+  }, []);
+
+  const confirmPendingVoucher = useCallback((voucherId: string) => {
+    const currentVouchers = readStorage<Voucher[]>(VOUCHERS_KEY, []);
+    const voucher = currentVouchers.find((item) => item.id === voucherId);
+    if (!voucher || voucher.status !== "pending") return;
+    const nextVouchers = currentVouchers.map((item) => item.id === voucherId ? { ...item, status: "active" as const } : item);
+    const currentCampaigns = readStorage(CAMPAIGNS_KEY, DEFAULT_CAMPAIGNS);
+    const nextCampaigns = currentCampaigns.map((item) => item.id === voucher.campaignId ? { ...item, sold: item.sold + 1 } : item);
+    writeStorage(VOUCHERS_KEY, nextVouchers);
+    writeStorage(CAMPAIGNS_KEY, nextCampaigns);
+    setVouchers(nextVouchers);
+    setCampaigns(nextCampaigns);
+  }, []);
+
+  return { campaigns, vouchers, ready, saveCampaign, purchaseCampaign, markRedeemed, markRefunded, confirmPendingVoucher, syncMyVouchers };
 }

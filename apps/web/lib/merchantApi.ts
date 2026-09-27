@@ -69,8 +69,8 @@ export async function createMerchantApplication(
   return response.json() as Promise<MerchantProfile>;
 }
 
-export async function listMerchantApplications(walletAddress: string): Promise<MerchantProfile[]> {
-  const response = await authorizedFetch("/api/v1/admin/merchants?status=pending", walletAddress);
+export async function listMerchantApplications(walletAddress: string, status: "pending" | "verified" = "pending"): Promise<MerchantProfile[]> {
+  const response = await authorizedFetch(`/api/v1/admin/merchants?status=${status}`, walletAddress);
   if (!response.ok) throw new Error(await readError(response));
   return response.json() as Promise<MerchantProfile[]>;
 }

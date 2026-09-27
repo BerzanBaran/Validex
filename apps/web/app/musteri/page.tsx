@@ -1,18 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { DashboardHeader } from "../../components/DashboardHeader";
 import { useMarketplace } from "../../lib/marketplace";
 import { useSolanaBalances } from "../../lib/solanaRpc";
+import { chainConfigured } from "../../lib/validexChain";
 
 export default function CustomerDashboard() {
   const marketplace = useMarketplace();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
   const balances = useSolanaBalances(walletAddress);
+
+  useEffect(() => {
+    if (walletAddress && chainConfigured()) void marketplace.syncMyVouchers(walletAddress).catch(() => {});
+  }, [walletAddress, marketplace.syncMyVouchers]);
 
   const campaigns = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("tr-TR");
@@ -32,19 +36,6 @@ export default function CustomerDashboard() {
     (voucher) => walletAddress && voucher.ownerWallet === walletAddress,
   );
 
-  function purchase(campaignId: string) {
-    if (!walletAddress) {
-      setNotice("Satın almak için önce Solflare veya Phantom cüzdanınızı bağlayın.");
-      return;
-    }
-    try {
-      const voucher = marketplace.purchaseCampaign(campaignId, walletAddress);
-      setNotice(`${voucher.title} kuponu demo olarak satın alındı ve Kuponlarım'a eklendi.`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Satın alma tamamlanamadı.");
-    }
-  }
-
   return (
     <main className="dashboardPage customerDashboard">
       <DashboardHeader role="customer" onAddressChange={setWalletAddress} />
@@ -60,8 +51,6 @@ export default function CustomerDashboard() {
           <small>{balances.status === "error" ? "Solana RPC bağlantısı kurulamadı." : walletAddress && balances.solBalance !== null ? `${balances.solBalance.toFixed(4)} SOL · ${balances.network}` : balances.network}</small>
         </div>
       </section>
-
-      {notice ? <div className="dashboardShell notice" role="status">{notice}<button onClick={() => setNotice(null)}>×</button></div> : null}
 
       <section className="dashboardShell dashboardContent">
         <div className="contentHeading">
@@ -86,7 +75,7 @@ export default function CustomerDashboard() {
                 <h3>{campaign.title}</h3>
                 <p className="description">{campaign.description}</p>
                 <div className="stockLine"><span>{campaign.originalValueUsdc} USDC değerinde</span><span>{campaign.stock - campaign.sold} kaldı</span></div>
-                <div className="cardActions"><Link className="secondaryButton" href={`/kampanyalar/${campaign.id}`}>Detaylar</Link><button className="actionButton" onClick={() => purchase(campaign.id)} type="button">Hızlı al</button></div>
+                <div className="cardActions"><Link className="secondaryButton" href={`/kampanyalar/${campaign.id}`}>Detaylar</Link><Link className="actionButton" href={`/kampanyalar/${campaign.id}`}>Satın al</Link></div>
               </div>
             </article>
           ))}
@@ -102,8 +91,8 @@ export default function CustomerDashboard() {
           <div className="voucherList">
             {myVouchers.map((voucher) => (
               <Link className="voucherRow" href={`/musteri/kuponlar/${voucher.id}`} key={voucher.id}>
-                <div><span className="statusPill">AKTİF</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
-                <div className="voucherCode"><small>TEK KULLANIMLIK KOD</small><strong>{voucher.code}</strong></div>
+                <div><span className="statusPill">{voucher.status === "pending" ? "ZİNCİR KONTROLÜ" : voucher.status === "redeemed" ? "KULLANILDI" : voucher.status === "refunded" ? "İADE" : "AKTİF"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
+                <div className="voucherCode"><small>KUPON REFERANSI</small><strong>{voucher.code}</strong></div>
               </Link>
             ))}
           </div>
@@ -112,7 +101,7 @@ export default function CustomerDashboard() {
         )}
       </section>
 
-      <div className="demoBanner">Demo modu: Bu ekranda henüz gerçek USDC transferi yapılmaz.</div>
+      <div className="demoBanner">{chainConfigured() ? "USDC ödemeleri yalnızca zincire bağlı kampanyalarda cüzdan imzası ve zincir onayıyla yapılır." : "Ödeme modu kapalı: program ve USDC mint adresleri ayarlanana kadar USDC tahsil edilmez."}</div>
     </main>
   );
 }

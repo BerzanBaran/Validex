@@ -7,10 +7,11 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { DashboardHeader } from "../../../../../components/DashboardHeader";
 import { StatusBadge } from "../../../../../components/ui/StatusBadge";
-import { useMarketplace, Voucher } from "../../../../../lib/marketplace";
+import { useMarketplace } from "../../../../../lib/marketplace";
 import { decodeVoucherPass } from "../../../../../lib/voucherQr";
+import { chainConfigured, prepareRedemptionHandoff } from "../../../../../lib/validexChain";
 
-type ScanResult = { tone: "success" | "danger"; title: string; detail: string; voucher?: Voucher };
+type ScanResult = { tone: "success" | "danger"; title: string; detail: string };
 
 export default function VoucherScannerPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,30 +23,29 @@ export default function VoucherScannerPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop(): void } | null>(null);
+  const workingRef = useRef(false);
+  const [handoff, setHandoff] = useState("");
 
   useEffect(() => () => controlsRef.current?.stop(), []);
 
-  function redeem(code: string, qrCampaignId = id) {
-    if (!walletAddress) {
-      setResult({ tone: "danger", title: "Cüzdan gerekli", detail: "Kupon doğrulamak için işletme cüzdanınızı bağlayın." });
-      return;
-    }
+  async function handleRawValue(raw: string) {
+    if (workingRef.current) return;
+    workingRef.current = true;
     try {
-      const voucher = marketplace.redeemVoucher(code.trim(), walletAddress, qrCampaignId);
-      setResult({ tone: "success", title: "Kupon doğrulandı", detail: `${voucher.title} başarıyla kullanıldı olarak işaretlendi.`, voucher });
+      const pass = decodeVoucherPass(raw);
+      if (!walletAddress || !authorized) throw new Error("Kampanyanın işletme cüzdanını bağlayın.");
+      if (!chainConfigured() || !campaign?.chainCampaign || !pass.chainVoucher || pass.campaignId !== id) {
+        throw new Error("Bu kupon zincir ödemesine bağlı değil; gerçek kullanıma açılamaz.");
+      }
+      const signed = await prepareRedemptionHandoff(pass.chainVoucher, pass.ownerWallet, walletAddress, campaign.chainCampaign);
+      setHandoff(signed);
+      setResult({ tone: "success", title: "İşletme imzaladı", detail: "Aşağıdaki işlem metnini müşteriye iletin. Müşteri kendi cüzdanıyla onaylayınca USDC ödemesi tamamlanır." });
       controlsRef.current?.stop();
       setScanning(false);
     } catch (error) {
-      setResult({ tone: "danger", title: "Kupon reddedildi", detail: error instanceof Error ? error.message : "Kupon doğrulanamadı." });
-    }
-  }
-
-  function handleRawValue(raw: string) {
-    try {
-      const pass = decodeVoucherPass(raw);
-      redeem(pass.code, pass.campaignId);
-    } catch (error) {
       setResult({ tone: "danger", title: "Geçersiz QR", detail: error instanceof Error ? error.message : "QR okunamadı." });
+    } finally {
+      workingRef.current = false;
     }
   }
 
@@ -56,7 +56,7 @@ export default function VoucherScannerPage() {
     try {
       const reader = new BrowserQRCodeReader();
       controlsRef.current = await reader.decodeFromVideoDevice(undefined, videoRef.current, (scan) => {
-        if (scan) handleRawValue(scan.getText());
+        if (scan) void handleRawValue(scan.getText());
       });
     } catch {
       setScanning(false);
@@ -66,7 +66,7 @@ export default function VoucherScannerPage() {
 
   function submitManual(event: FormEvent) {
     event.preventDefault();
-    redeem(manualCode);
+    void handleRawValue(manualCode.trim());
   }
 
   if (!marketplace.ready) return <main className="dashboardPage"><div className="pageState">Tarayıcı hazırlanıyor…</div></main>;
@@ -81,13 +81,14 @@ export default function VoucherScannerPage() {
       <section className="dashboardShell scannerGrid">
         <article className="cameraCard">
           <div className={`cameraViewport ${scanning ? "active" : ""}`}><video ref={videoRef} muted playsInline /><div className="scanFrame"><i /><i /><i /><i /></div>{!scanning ? <div className="cameraPlaceholder"><span>⌗</span><p>Kamera henüz açık değil</p></div> : null}</div>
-          {!scanning ? <button className="actionButton" disabled={!authorized} onClick={() => void startScanner()} type="button">Kamerayı aç</button> : <button className="secondaryButton wide" onClick={() => { controlsRef.current?.stop(); setScanning(false); }} type="button">Taramayı durdur</button>}
+          {!scanning ? <button className="actionButton" disabled={!authorized || !chainConfigured()} onClick={() => void startScanner()} type="button">Kamerayı aç</button> : <button className="secondaryButton wide" onClick={() => { controlsRef.current?.stop(); setScanning(false); }} type="button">Taramayı durdur</button>}
           <small>Kamera yalnızca QR kodunu okumak için cihazınızda çalışır; görüntü kaydedilmez.</small>
         </article>
         <aside className="scannerAside">
           {result ? <div className={`scanResult ${result.tone}`}><span>{result.tone === "success" ? "✓" : "!"}</span><div><strong>{result.title}</strong><p>{result.detail}</p></div></div> : <div className="scanInstructions"><p className="eyebrow">HAZIR</p><h2>Müşterinin kuponunu isteyin.</h2><p>QR çerçeveye girdiğinde otomatik okunur ve tekrar kullanım kontrolü yapılır.</p></div>}
-          <div className="manualDivider"><span>veya yedek kod</span></div>
-          <form className="manualCodeForm" onSubmit={submitManual}><label>Tek kullanımlık kupon kodu<input value={manualCode} onChange={(event) => setManualCode(event.target.value.toUpperCase())} placeholder="VLDX-XXXXXXXXXXXX" required /></label><button className="secondaryButton wide" disabled={!authorized} type="submit">Kodu doğrula</button></form>
+          <div className="manualDivider"><span>veya QR içeriği</span></div>
+          <form className="manualCodeForm" onSubmit={submitManual}><label>Kupon QR verisi<textarea value={manualCode} onChange={(event) => setManualCode(event.target.value)} placeholder="Kupon QR içeriğini yapıştırın" required /></label><button className="secondaryButton wide" disabled={!authorized || !chainConfigured()} type="submit">İşletme olarak imzala</button></form>
+          {handoff ? <div className="manualCodeForm"><label>Müşteriye iletilecek imzalı işlem<textarea readOnly value={handoff} /></label><button className="secondaryButton wide" onClick={() => void navigator.clipboard.writeText(handoff)} type="button">İşlemi kopyala</button><small>Bu işlem henüz kuponu kullanmaz; müşteri imzası ve zincir onayı gerekir.</small></div> : null}
         </aside>
       </section>
     </main>

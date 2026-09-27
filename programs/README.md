@@ -14,9 +14,11 @@
 | BuyerCounter | `buyer`, Campaign PDA, müşteri cüzdanı | Müşteri başına satın alma sınırı |
 | Voucher | `voucher`, Campaign PDA, 32 bayt kupon hash'i | Tekil kupon, sahibi, tutarı ve kullanım durumu |
 
-Escrow, Campaign PDA'sının ödeme mint'i için associated token hesabıdır. Kampanya oluşturulurken açılır. Satın alma fiyatın tamamını escrow'a aktarır. Hedeflenen kullanım akışında `%2` komisyon treasury token hesabına ve kalan tutar işletme token hesabına aktarılacaktır; bu talimat henüz eklenmedi. İptal edilen kampanyada veya kuponun süresi dolduğunda kullanılmamış kuponun sahibi fiyatın tamamını geri alabilir.
+Escrow, Campaign PDA'sının ödeme mint'i için associated token hesabıdır. Kampanya oluşturulurken açılır. Satın alma fiyatın tamamını escrow'a aktarır. `redeem_voucher`, müşteri ve işletme cüzdanlarının iki imzasını ister; `%2` komisyon treasury token hesabına, kalan tutar işletme token hesabına aynı işlemde aktarılır. İptal edilen kampanyada veya kuponun süresi dolduğunda kullanılmamış kuponun sahibi fiyatın tamamını geri alabilir. SPL token transferlerinden biri başarısızsa tüm Solana işlemi geri alınır.
 
-Kupon sırrı API tarafından oluşturulur ve veritabanında şifreli tutulur. Zincirde yalnızca 32 bayt SHA-256 özeti yer alır. Kupon kullanma yetkisi tasarımı kesinleştirildikten sonra `redeem_voucher` talimatı eklenecektir.
+Kupon sırrı API tarafından oluşturulur ve veritabanında şifreli tutulur. Zincirde yalnızca 32 bayt SHA-256 özeti yer alır. Kullanımda sır zincire açıklanmaz; iki taraf aynı işlemi imzalar.
+
+Program henüz dağıtılmadı. Yönetici açık adresi, gerçek program anahtarı ve devnet USDC mint adresi belirlenmeden ödeme arayüzü kapalıdır. `cargo test` validator entegrasyon testi yerine geçmez; devnet kullanımı öncesi SBF derlemesi ve alım/kullanım/iade uçtan uca testleri gerekir.
 
 ## Yerel kontroller
 

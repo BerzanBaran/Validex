@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ValidexError {
+    #[msg("Commission exceeds 100 percent")]
+    InvalidCommission,
     #[msg("Only the configured admin may initialize the platform")]
     UnauthorizedAdmin,
     #[msg("The payment mint must use six decimal places")]
