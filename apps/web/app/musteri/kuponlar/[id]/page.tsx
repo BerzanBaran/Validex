@@ -13,6 +13,7 @@ import { useMarketplace } from "../../../../lib/marketplace";
 import { encodeVoucherPass } from "../../../../lib/voucherQr";
 import { chainConfigured, confirmRedemptionHandoff, loadChain, readVoucherStatus, refundInstruction, sendWalletTransaction } from "../../../../lib/validexChain";
 import { confirmVoucherRedemption, confirmVoucherRefund } from "../../../../lib/voucherApi";
+import { voucherAction } from "../../../../lib/voucherPolicy";
 
 export default function VoucherDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,8 +24,15 @@ export default function VoucherDetailPage() {
   const [handoff, setHandoff] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const voucher = useMemo(() => marketplace.vouchers.find((item) => item.id === id), [id, marketplace.vouchers]);
-  const payload = voucher?.status === "active" && voucher.chainVoucher ? encodeVoucherPass(voucher) : "";
+  const action = voucher ? voucherAction(voucher, now) : "none";
+  const payload = action === "redeem" && voucher ? encodeVoucherPass(voucher) : "";
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!payload) return;
@@ -69,7 +77,7 @@ export default function VoucherDetailPage() {
   }
 
   async function approveRedemption() {
-    if (!voucher?.chainVoucher || !walletAddress || walletAddress !== voucher.ownerWallet) return;
+    if (!voucher?.chainVoucher || !walletAddress || walletAddress !== voucher.ownerWallet || action !== "redeem") return;
     try {
       setBusy(true);
       setMessage(null);
@@ -84,7 +92,7 @@ export default function VoucherDetailPage() {
   }
 
   async function requestRefund() {
-    if (!voucher?.chainVoucher || !walletAddress || walletAddress !== voucher.ownerWallet) return;
+    if (!voucher?.chainVoucher || !walletAddress || walletAddress !== voucher.ownerWallet || action !== "refund") return;
     try {
       setBusy(true);
       setMessage(null);
@@ -112,20 +120,20 @@ export default function VoucherDetailPage() {
       {walletAddress && !belongsToWallet ? <div className="dashboardShell notice errorNotice">Bu kupon bağlı cüzdana ait değil.</div> : null}
       <section className="dashboardShell voucherPassLayout">
         <article className="voucherPass">
-          <div className="voucherPassHeader"><div><p className="eyebrow">VALIDEX PASS</p><h1>{voucher.title}</h1><p>{voucher.merchant}</p></div><StatusBadge tone={voucher.status === "active" ? "success" : "neutral"}>{voucher.status === "pending" ? "ZİNCİR BEKLENİYOR" : voucher.status === "active" ? "AKTİF" : voucher.status === "refunded" ? "İADE EDİLDİ" : voucher.status === "redeemed" ? "KULLANILDI" : "KAPALI"}</StatusBadge></div>
+          <div className="voucherPassHeader"><div><p className="eyebrow">VALIDEX PASS</p><h1>{voucher.title}</h1><p>{voucher.merchant}</p></div><StatusBadge tone={action === "redeem" ? "success" : "neutral"}>{voucher.status === "pending" ? "ZİNCİR BEKLENİYOR" : action === "refund" ? "İADE TALEP EDİLEBİLİR" : action === "redeem" ? "AKTİF" : voucher.status === "refunded" ? "İADE EDİLDİ" : voucher.status === "redeemed" ? "KULLANILDI" : "KAPALI"}</StatusBadge></div>
           <div className="perforation" />
           <div className="qrStage">
-            {belongsToWallet && voucher.status === "active" && qrUrl ? <img src={qrUrl} alt="Tek kullanımlık Validex kupon QR kodu" /> : <div className="qrLocked">{voucher.status === "pending" ? "Zincir onayı bekleniyor" : voucher.status === "redeemed" ? "Kupon kullanıldı" : voucher.status === "refunded" ? "İade edildi" : voucher.status === "expired" || voucher.status === "failed" ? "Kupon kapalı" : walletAddress ? "Cüzdan eşleşmedi" : "Cüzdan bağlantısı gerekli"}</div>}
+            {belongsToWallet && action === "redeem" && qrUrl ? <img src={qrUrl} alt="Tek kullanımlık Validex kupon QR kodu" /> : <div className="qrLocked">{voucher.status === "pending" ? "Zincir onayı bekleniyor" : action === "refund" ? "Kupon kullanıma kapalı; USDC iadesi talep edilebilir" : voucher.status === "redeemed" ? "Kupon kullanıldı" : voucher.status === "refunded" ? "İade edildi" : voucher.status === "expired" || voucher.status === "failed" ? "Kupon kapalı" : walletAddress ? "Cüzdan eşleşmedi" : "Cüzdan bağlantısı gerekli"}</div>}
             <small>İşletme görevlisine bu ekranı gösterin</small>
           </div>
           <div className="voucherPassCode"><span>KUPON REFERANSI</span><strong>{belongsToWallet ? voucher.code : "••••••••••••"}</strong></div>
         </article>
         <aside className="voucherAside">
-          <p className="eyebrow">KUPON DETAYI</p><h2>Kullanıma hazır.</h2>
-          <p>İşletme QR ile kuponu bulup işlemi imzalar; USDC ödemesi ancak sizin ikinci cüzdan imzanızla tamamlanır.</p>
+          <p className="eyebrow">KUPON DETAYI</p><h2>{action === "refund" ? "İade hakkınız var." : action === "redeem" ? "Kullanıma hazır." : "Kupon durumu"}</h2>
+          <p>{action === "refund" ? "Kampanya iptal edildiği veya kullanım süresi dolduğu için kullanılmamış kuponun USDC tutarını cüzdanınızla escrow'dan geri isteyebilirsiniz. İade otomatik gönderilmez." : "İşletme QR ile kuponu bulup işlemi imzalar; USDC ödemesi ancak sizin ikinci cüzdan imzanızla tamamlanır."}</p>
           <dl><div><dt>Satın alma</dt><dd>{voucher.purchasedAt ? new Date(voucher.purchasedAt).toLocaleDateString("tr-TR") : "Zincir onayı bekleniyor"}</dd></div><div><dt>Son kullanım</dt><dd>{voucher.expiresAt}</dd></div><div><dt>Ödenen</dt><dd>{voucher.priceUsdc} USDC</dd></div><div><dt>Ağ</dt><dd>Solana Devnet</dd></div></dl>
           <button className="secondaryButton wide" onClick={() => setShareOpen(true)} type="button">Kupon bağlantısını paylaş</button>
-          {belongsToWallet && chainConfigured() ? <div className="manualCodeForm"><button className="secondaryButton wide" disabled={busy} onClick={() => void checkChainStatus()} type="button">Zincir durumunu kontrol et</button>{voucher.status === "active" && voucher.chainVoucher ? <><label>İşletmenin imzaladığı işlem metni<textarea value={handoff} onChange={(event) => setHandoff(event.target.value)} placeholder="İşletmeden gelen imzalı işlemi buraya yapıştırın" /></label><button className="actionButton" disabled={busy || !handoff.trim()} onClick={() => void approveRedemption()} type="button">Kupon kullanımını cüzdanımla onayla</button><button className="secondaryButton wide" disabled={busy} onClick={() => void requestRefund()} type="button">İptal/süre sonu için USDC iadesi talep et</button></> : null}{message ? <p role="status">{message}</p> : null}</div> : null}
+          {belongsToWallet && chainConfigured() ? <div className="manualCodeForm"><button className="secondaryButton wide" disabled={busy} onClick={() => void checkChainStatus()} type="button">Zincir durumunu kontrol et</button>{action === "redeem" ? <><label>İşletmenin imzaladığı işlem metni<textarea value={handoff} onChange={(event) => setHandoff(event.target.value)} placeholder="İşletmeden gelen imzalı işlemi buraya yapıştırın" /></label><button className="actionButton" disabled={busy || !handoff.trim()} onClick={() => void approveRedemption()} type="button">Kupon kullanımını cüzdanımla onayla</button></> : null}{action === "refund" ? <button className="secondaryButton wide" disabled={busy} onClick={() => void requestRefund()} type="button">Escrow'dan USDC iadesi talep et</button> : null}{message ? <p role="status">{message}</p> : null}</div> : null}
           <Link className="textLink" href={`/kampanyalar/${voucher.campaignId}`}>Kampanyayı görüntüle →</Link>
         </aside>
       </section>

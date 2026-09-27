@@ -7,6 +7,7 @@ import { DashboardHeader } from "../../components/DashboardHeader";
 import { useMarketplace } from "../../lib/marketplace";
 import { useSolanaBalances } from "../../lib/solanaRpc";
 import { chainConfigured } from "../../lib/validexChain";
+import { voucherAction } from "../../lib/voucherPolicy";
 
 export default function CustomerDashboard() {
   const marketplace = useMarketplace();
@@ -85,7 +86,7 @@ export default function CustomerDashboard() {
       </section>
 
       <section className="dashboardShell vouchersSection">
-        <div className="contentHeading"><div><p className="eyebrow">CÜZDANIM</p><h2>Kuponlarım</h2></div><span>{myVouchers.filter((voucher) => voucher.status === "active").length} aktif kupon</span></div>
+        <div className="contentHeading"><div><p className="eyebrow">CÜZDANIM</p><h2>Kuponlarım</h2></div><span>{myVouchers.filter((voucher) => voucherAction(voucher) === "redeem").length} kullanılabilir kupon</span></div>
         {!walletAddress ? (
           <div className="emptyState">Kuponlarınızı görmek için Solflare veya Phantom cüzdanınızı bağlayın.</div>
         ) : marketplace.vouchersLoading ? (
@@ -96,7 +97,7 @@ export default function CustomerDashboard() {
           <div className="voucherList">
             {myVouchers.map((voucher) => (
               <Link className="voucherRow" href={`/musteri/kuponlar/${voucher.id}`} key={voucher.id}>
-                <div><span className="statusPill">{voucher.status === "pending" ? "ZİNCİR KONTROLÜ" : voucher.status === "redeemed" ? "KULLANILDI" : voucher.status === "refunded" ? "İADE" : voucher.status === "active" ? "AKTİF" : "KAPALI"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
+                <div><span className="statusPill">{voucher.status === "pending" ? "ZİNCİR KONTROLÜ" : voucher.status === "redeemed" ? "KULLANILDI" : voucher.status === "refunded" ? "İADE" : voucherAction(voucher) === "refund" ? "İADE HAKKI" : voucherAction(voucher) === "redeem" ? "AKTİF" : "KAPALI"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
                 <div className="voucherCode"><small>KUPON REFERANSI</small><strong>{voucher.code}</strong></div>
               </Link>
             ))}

@@ -16,6 +16,8 @@
 
 Escrow, Campaign PDA'sının ödeme mint'i için associated token hesabıdır. Kampanya oluşturulurken açılır. Satın alma fiyatın tamamını escrow'a aktarır. `redeem_voucher`, müşteri ve işletme cüzdanlarının iki imzasını ister; `%2` komisyon treasury token hesabına, kalan tutar işletme token hesabına aynı işlemde aktarılır. İptal edilen kampanyada veya kuponun süresi dolduğunda kullanılmamış kuponun sahibi fiyatın tamamını geri alabilir. SPL token transferlerinden biri başarısızsa tüm Solana işlemi geri alınır.
 
+İade otomatik transfer değildir: kupon sahibi `refund_voucher` işlemini kendi cüzdanıyla imzalar. Kupon, zincirde `Active` olarak kalır fakat iptal veya son kullanım zamanından sonra kullanılamaz; başarılı iade onu `Refunded` yapar. İkinci iade veya kullanılmış kuponun iadesi reddedilir. Kampanya iptali satışları ve kupon kullanımını durdurur, mevcut kullanılmamış kuponlar için anında iade hakkı açar. Escrow'daki tutar yalnızca alıcıya ait USDC token hesabına ve kuponun tam fiyatı kadar aktarılır.
+
 Kupon sırrı API tarafından oluşturulur ve veritabanında şifreli tutulur. Zincirde yalnızca 32 bayt SHA-256 özeti yer alır. Kullanımda sır zincire açıklanmaz; iki taraf aynı işlemi imzalar.
 
 Program henüz dağıtılmadı. Yönetici açık adresi, gerçek program anahtarı ve devnet USDC mint adresi belirlenmeden ödeme arayüzü kapalıdır. `cargo test` validator entegrasyon testi yerine geçmez; devnet kullanımı öncesi SBF derlemesi ve alım/kullanım/iade uçtan uca testleri gerekir.

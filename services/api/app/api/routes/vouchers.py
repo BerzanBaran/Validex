@@ -112,6 +112,7 @@ def voucher_response(
             price_minor if price_minor is not None else campaign.price_minor if campaign else None
         ),
         "redeemed_at": voucher.redeemed_at,
+        "campaign_cancelled": campaign.status == CampaignStatus.CANCELLED if campaign else False,
     }
     if price_minor is not None:
         return VoucherPurchaseIntentResponse(**payload, price_minor=price_minor)

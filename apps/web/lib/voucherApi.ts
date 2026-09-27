@@ -10,6 +10,7 @@ export type ApiVoucher = {
   secret_base64: string; voucher_hash_hex: string;
   price_minor?: number;
   campaign_title?: string | null; merchant_name?: string | null; redeemed_at?: string | null;
+  campaign_cancelled: boolean;
 };
 
 async function request(path: string, walletAddress: string, init?: RequestInit): Promise<ApiVoucher | ApiVoucher[]> {

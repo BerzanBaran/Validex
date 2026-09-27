@@ -14,6 +14,7 @@ const voucher: Voucher = {
   expiresAt: "2027-01-31",
   code: "VLDX-ABCDEF123456",
   status: "active",
+  campaignCancelled: false,
 };
 
 describe("Validex voucher QR payload", () => {

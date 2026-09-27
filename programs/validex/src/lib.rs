@@ -10,7 +10,7 @@ mod state;
 use contexts::*;
 use error::ValidexError;
 use math::split_payment;
-use rules::{assert_purchasable, assert_redeemable, assert_refundable};
+use rules::{assert_cancellable, assert_purchasable, assert_redeemable, assert_refundable};
 use state::*;
 
 declare_id!("F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe");
@@ -168,6 +168,7 @@ pub mod validex {
     }
 
     pub fn cancel_campaign(ctx: Context<CancelCampaign>) -> Result<()> {
+        assert_cancellable(&ctx.accounts.campaign)?;
         ctx.accounts.campaign.cancelled = true;
         Ok(())
     }

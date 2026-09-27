@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from app.api.routes.vouchers import voucher_response
 from app.core.config import get_settings
 from app.domain.vouchers import encrypt_voucher_secret, hash_voucher_secret
-from app.models.entities import Campaign, Merchant, Voucher, VoucherStatus
+from app.models.entities import Campaign, CampaignStatus, Merchant, Voucher, VoucherStatus
 
 
 def test_voucher_response_contains_database_campaign_details() -> None:
@@ -15,6 +15,7 @@ def test_voucher_response_contains_database_campaign_details() -> None:
         merchant_id=merchant.id,
         title="İki kahve",
         price_minor=5_000_000,
+        status=CampaignStatus.CANCELLED,
     )
     voucher = Voucher(
         id=uuid.uuid4(),
@@ -34,3 +35,4 @@ def test_voucher_response_contains_database_campaign_details() -> None:
     assert response.merchant_name == "Validex Cafe"
     assert response.price_minor == 5_000_000
     assert response.purchased_at is None
+    assert response.campaign_cancelled is True

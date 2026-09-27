@@ -28,6 +28,11 @@ pub fn assert_refundable(campaign: &Campaign, voucher: &Voucher, now: i64) -> Re
     Ok(())
 }
 
+pub fn assert_cancellable(campaign: &Campaign) -> Result<()> {
+    require!(!campaign.cancelled, ValidexError::CampaignUnavailable);
+    Ok(())
+}
+
 pub fn assert_redeemable(voucher: &Voucher, now: i64) -> Result<()> {
     require!(
         voucher.status == VoucherStatus::Active,
@@ -92,6 +97,17 @@ mod tests {
         let mut redeemed = voucher();
         redeemed.status = VoucherStatus::Redeemed;
         assert!(assert_refundable(&cancelled, &redeemed, 150).is_err());
+        let mut refunded = voucher();
+        refunded.status = VoucherStatus::Refunded;
+        assert!(assert_refundable(&cancelled, &refunded, 150).is_err());
+    }
+
+    #[test]
+    fn campaign_cannot_be_cancelled_twice() {
+        assert!(assert_cancellable(&campaign()).is_ok());
+        let mut cancelled = campaign();
+        cancelled.cancelled = true;
+        assert!(assert_cancellable(&cancelled).is_err());
     }
 
     #[test]

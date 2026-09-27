@@ -15,6 +15,7 @@ const remote: ApiVoucher = {
   campaign_title: "İki kahve",
   merchant_name: "Kafe",
   price_minor: 5_000_000,
+  campaign_cancelled: false,
 };
 
 describe("API-backed voucher mapping", () => {
@@ -26,6 +27,7 @@ describe("API-backed voucher mapping", () => {
     expect(voucher.merchant).toBe("Kafe");
     expect(voucher.priceUsdc).toBe(5);
     expect(voucher.purchasedAt).toBe("");
+    expect(voucher.campaignCancelled).toBe(false);
   });
 
   it("only maps an API-confirmed voucher to active", () => {
@@ -37,5 +39,10 @@ describe("API-backed voucher mapping", () => {
     }, "buyer-wallet");
     expect(voucher.status).toBe("active");
     expect(voucher.chainVoucher).toBe("chain-voucher");
+  });
+
+  it("maps campaign cancellation for customer refund eligibility", () => {
+    const voucher = voucherFromApi({ ...remote, campaign_cancelled: true }, "buyer-wallet");
+    expect(voucher.campaignCancelled).toBe(true);
   });
 });

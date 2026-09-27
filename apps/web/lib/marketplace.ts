@@ -42,6 +42,7 @@ export type Voucher = {
   status: "pending" | "active" | "redeemed" | "refunded" | "expired" | "failed";
   redeemedAt?: string;
   chainVoucher?: string;
+  campaignCancelled: boolean;
 };
 
 export type CampaignDraft = Omit<Campaign, "id" | "sold" | "status" | "accent">;
@@ -60,6 +61,7 @@ export function voucherFromApi(item: ApiVoucher, walletAddress: string, campaign
     status: item.status === "pending_chain" ? "pending" : item.status,
     redeemedAt: item.redeemed_at ?? undefined,
     chainVoucher: item.onchain_address ?? undefined,
+    campaignCancelled: item.campaign_cancelled,
   };
 }
 

@@ -26,6 +26,7 @@ class VoucherRead(BaseModel):
     merchant_name: str | None = None
     price_minor: int | None = None
     redeemed_at: datetime | None = None
+    campaign_cancelled: bool = False
 
 
 class VoucherPurchaseIntentResponse(VoucherRead):

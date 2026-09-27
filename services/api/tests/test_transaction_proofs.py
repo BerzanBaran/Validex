@@ -59,6 +59,11 @@ def test_refund_proof_returns_full_amount_to_buyer() -> None:
         price_minor=5_000_000,
     )
     assert proof.transfers[0].amount == 5_000_000
+    assert proof.signers == ("buyer",)
+    assert proof.accounts[3] == "voucher"
+    assert proof.transfers[0].source_index == 5
+    assert proof.transfers[0].destination_index == 6
+    assert len(proof.transfers) == 1
     assert proof.token_owners == ((5, "campaign"), (6, "buyer"))
 
 
