@@ -1,0 +1,21 @@
+[package]
+name = "validex"
+version = "0.1.0"
+description = "Validex Solana voucher escrow program"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "validex"
+
+[features]
+default = []
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "=1.2.0", features = ["init-if-needed"] }
+anchor-spl = { version = "=1.2.0", features = ["associated_token", "token_2022"] }
