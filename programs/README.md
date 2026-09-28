@@ -32,4 +32,4 @@ cargo test -p validex --lib
 anchor build
 ```
 
-`cargo test` alan kurallarını ve tamsayı komisyon hesabını sınar. Token transferi ve hesap yetkilerinin tamamı ayrıca validator üzerinde entegrasyon testleriyle doğrulanmalıdır.
+`cargo test` alan kurallarını, yanlış mint reddini, iki taraflı kullanım yetkisini, tekrar kullanımı ve tamsayı komisyon hesabını sınar. Token transferi ve Anchor hesap kısıtlarının tamamı ayrıca validator üzerinde entegrasyon testleriyle doğrulanmalıdır. Teslim öncesi kontrol sırası için [hackathon paketine](../docs/hackathon-submission.md) bakın.

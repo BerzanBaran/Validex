@@ -1,7 +1,29 @@
 use anchor_lang::prelude::*;
 
 use crate::error::ValidexError;
-use crate::state::{Campaign, Voucher, VoucherStatus};
+use crate::state::{Campaign, Platform, Voucher, VoucherStatus};
+
+pub fn assert_payment_mint(platform: &Platform, supplied_mint: Pubkey) -> Result<()> {
+    require_keys_eq!(
+        platform.payment_mint,
+        supplied_mint,
+        ValidexError::InvalidPaymentMint
+    );
+    Ok(())
+}
+
+pub fn assert_redemption_authorities(
+    campaign: &Campaign,
+    voucher: &Voucher,
+    campaign_address: Pubkey,
+    buyer: Pubkey,
+    merchant: Pubkey,
+) -> Result<()> {
+    require_keys_eq!(voucher.buyer, buyer, ValidexError::UnauthorizedRedemption);
+    require_keys_eq!(campaign.authority, merchant, ValidexError::UnauthorizedRedemption);
+    require_keys_eq!(voucher.campaign, campaign_address, ValidexError::UnauthorizedRedemption);
+    Ok(())
+}
 
 pub fn assert_purchasable(campaign: &Campaign, now: i64, buyer_count: u16) -> Result<()> {
     require!(
@@ -77,6 +99,44 @@ mod tests {
         }
     }
 
+    fn platform(mint: Pubkey) -> Platform {
+        Platform {
+            admin: Pubkey::new_unique(),
+            treasury: Pubkey::new_unique(),
+            payment_mint: mint,
+            token_program: Pubkey::new_unique(),
+            commission_bps: 200,
+            bump: 1,
+        }
+    }
+
+    #[test]
+    fn wrong_mint_is_rejected_before_token_transfer() {
+        let expected = Pubkey::new_unique();
+        assert!(assert_payment_mint(&platform(expected), expected).is_ok());
+        assert!(assert_payment_mint(&platform(expected), Pubkey::new_unique()).is_err());
+    }
+
+    #[test]
+    fn redemption_requires_voucher_owner_and_campaign_merchant() {
+        let campaign = campaign();
+        let mut voucher = voucher();
+        let campaign_address = Pubkey::new_unique();
+        voucher.campaign = campaign_address;
+        assert!(assert_redemption_authorities(
+            &campaign, &voucher, campaign_address, voucher.buyer, campaign.authority
+        ).is_ok());
+        assert!(assert_redemption_authorities(
+            &campaign, &voucher, campaign_address, Pubkey::new_unique(), campaign.authority
+        ).is_err());
+        assert!(assert_redemption_authorities(
+            &campaign, &voucher, campaign_address, voucher.buyer, Pubkey::new_unique()
+        ).is_err());
+        assert!(assert_redemption_authorities(
+            &campaign, &voucher, Pubkey::new_unique(), voucher.buyer, campaign.authority
+        ).is_err());
+    }
+
     #[test]
     fn purchase_checks_stock_limit_and_time() {
         assert!(assert_purchasable(&campaign(), 150, 0).is_ok());
@@ -117,5 +177,8 @@ mod tests {
         let mut already_used = voucher();
         already_used.status = VoucherStatus::Redeemed;
         assert!(assert_redeemable(&already_used, 150).is_err());
+        let mut refunded = voucher();
+        refunded.status = VoucherStatus::Refunded;
+        assert!(assert_redeemable(&refunded, 150).is_err());
     }
 }

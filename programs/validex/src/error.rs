@@ -8,6 +8,10 @@ pub enum ValidexError {
     UnauthorizedAdmin,
     #[msg("The payment mint must use six decimal places")]
     InvalidMintDecimals,
+    #[msg("The supplied mint does not match the platform payment mint")]
+    InvalidPaymentMint,
+    #[msg("Both the voucher owner and campaign merchant must authorize redemption")]
+    UnauthorizedRedemption,
     #[msg("The supplied token program does not own the payment mint")]
     InvalidTokenProgram,
     #[msg("Price, stock and buyer limit must be positive")]

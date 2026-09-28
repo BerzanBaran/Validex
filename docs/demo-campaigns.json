@@ -1,0 +1,32 @@
+[
+  {
+    "external_id": "validex-demo-coffee",
+    "title": "İki kahve, uzun bir sohbet",
+    "description": "Mahalle kahvecisinde iki içecek için tek kupon. Günlük bir molayı birlikte paylaşın.",
+    "terms": "Tek kullanım; kampanya bitiş tarihine kadar geçerli.",
+    "price_minor": 5000000,
+    "original_value_minor": 8000000,
+    "stock": 25,
+    "per_user_limit": 1
+  },
+  {
+    "external_id": "validex-demo-brunch",
+    "title": "Hafta sonu kahvaltısı",
+    "description": "Yerel restoranın seçili kahvaltı menüsünde kullanılabilecek tek kişilik kupon.",
+    "terms": "Tek kullanım; rezervasyon koşulları işletme tarafından belirtilir.",
+    "price_minor": 12000000,
+    "original_value_minor": 18000000,
+    "stock": 15,
+    "per_user_limit": 1
+  },
+  {
+    "external_id": "validex-demo-dessert",
+    "title": "Tatlı bir ara",
+    "description": "Mahalle pastanesinin seçili tatlılarında kullanılabilecek bir keşif kuponu.",
+    "terms": "Tek kullanım; diğer kampanyalarla birleştirilemez.",
+    "price_minor": 3000000,
+    "original_value_minor": 5000000,
+    "stock": 30,
+    "per_user_limit": 1
+  }
+]

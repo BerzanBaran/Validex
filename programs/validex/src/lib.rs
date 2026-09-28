@@ -10,7 +10,10 @@ mod state;
 use contexts::*;
 use error::ValidexError;
 use math::split_payment;
-use rules::{assert_cancellable, assert_purchasable, assert_redeemable, assert_refundable};
+use rules::{
+    assert_cancellable, assert_payment_mint, assert_purchasable,
+    assert_redeemable, assert_redemption_authorities, assert_refundable,
+};
 use state::*;
 
 declare_id!("F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe");
@@ -98,6 +101,7 @@ pub mod validex {
     }
 
     pub fn purchase_voucher(ctx: Context<PurchaseVoucher>, voucher_hash: [u8; 32]) -> Result<()> {
+        assert_payment_mint(&ctx.accounts.platform, ctx.accounts.payment_mint.key())?;
         let now = Clock::get()?.unix_timestamp;
         let campaign = &mut ctx.accounts.campaign;
         require_keys_neq!(
@@ -178,9 +182,17 @@ pub mod validex {
     }
 
     pub fn redeem_voucher(ctx: Context<RedeemVoucher>) -> Result<()> {
+        assert_payment_mint(&ctx.accounts.platform, ctx.accounts.payment_mint.key())?;
         let campaign = &ctx.accounts.campaign;
         require!(!campaign.cancelled, ValidexError::CampaignUnavailable);
         let voucher = &mut ctx.accounts.voucher;
+        assert_redemption_authorities(
+            campaign,
+            voucher,
+            campaign.key(),
+            ctx.accounts.buyer.key(),
+            ctx.accounts.merchant_wallet.key(),
+        )?;
         assert_redeemable(voucher, Clock::get()?.unix_timestamp)?;
         let split = split_payment(voucher.price_minor, ctx.accounts.platform.commission_bps)?;
 
@@ -259,6 +271,7 @@ pub mod validex {
     }
 
     pub fn refund_voucher(ctx: Context<RefundVoucher>) -> Result<()> {
+        assert_payment_mint(&ctx.accounts.platform, ctx.accounts.payment_mint.key())?;
         let now = Clock::get()?.unix_timestamp;
         let campaign = &ctx.accounts.campaign;
         let voucher = &mut ctx.accounts.voucher;

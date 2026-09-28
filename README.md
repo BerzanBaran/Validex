@@ -2,6 +2,8 @@
 
 Validex, yerel işletmelerin Solana üzerinde USDC karşılığı tek kullanımlık kupon yayımladığı saklamasız bir pazaryeri prototipidir.
 
+Hackathon teslim hazırlığı, doğrulama sınırları, demo seed verileri, mimari şema ve video çekim planı için [teslim paketine](docs/hackathon-submission.md) bakın. Gerçek devnet dağıtımı ve Solflare ödeme kanıtı henüz tamamlanmış değildir.
+
 ## İlk kilometre taşı
 
 Bu başlangıç sürümü, ürünün en riskli iş kurallarını merkeze alır:
