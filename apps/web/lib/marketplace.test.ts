@@ -10,9 +10,9 @@ const remote: ApiVoucher = {
   expires_at: "2027-02-01T00:00:00Z",
   purchased_at: null,
   onchain_address: null,
-  secret_base64: "",
+  secret_base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   voucher_hash_hex: "a".repeat(64),
-  campaign_title: "İki kahve",
+  campaign_title: "Two coffees",
   merchant_name: "Kafe",
   price_minor: 5_000_000,
   campaign_cancelled: false,
@@ -23,10 +23,11 @@ describe("API-backed voucher mapping", () => {
     const voucher = voucherFromApi(remote, "buyer-wallet");
     expect(voucher.status).toBe("pending");
     expect(voucher.chainVoucher).toBeUndefined();
-    expect(voucher.title).toBe("İki kahve");
+    expect(voucher.title).toBe("Two coffees");
     expect(voucher.merchant).toBe("Kafe");
     expect(voucher.priceUsdc).toBe(5);
     expect(voucher.purchasedAt).toBe("");
+    expect(voucher.secretBase64).toBe(remote.secret_base64);
     expect(voucher.campaignCancelled).toBe(false);
   });
 

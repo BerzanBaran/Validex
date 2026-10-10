@@ -1,35 +1,35 @@
-# Validex Anchor programı
+# Validex Anchor program
 
-`programs/validex` Solana üzerinde tek mint ile çalışan USDC kupon escrow sözleşmesidir. Anchor `1.2.0` kullanır. Program kimliği kaynak kodda geçici olarak tanımlıdır; devnet dağıtımından önce gerçek program anahtarı oluşturulup `anchor keys sync` ile eşitlenmelidir.
+`programs/validex` is a single-mint Solana USDC voucher escrow program built with Anchor `1.2.0`. Its Devnet program ID is `5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh`; the upgrade authority is the admin wallet `Cwd8Y3CtzztBcY5dwhLgqBMywtJuKW86KdqqLGwH2Zc8`. The program keypair is kept outside the repository.
 
-`ADMIN_PUBKEY` şimdilik sıfır adrestir: gerçek yönetici açık adresi belirlenene kadar `initialize_platform` güvenli biçimde başarısız olur. Dağıtımdan önce `src/lib.rs` içindeki sabit gerçek yönetici adresiyle değiştirilmelidir.
+`VALIDEX_ADMIN_WALLET` pins the admin public key at build time. If it is missing or invalid, `initialize_platform` fails safely. Supply it to the Anchor build environment; an `.env` file alone is not enough. Never put a private key or seed phrase in the repository.
 
-## Hesaplar
+## Accounts
 
-| Hesap | PDA seed'leri | Görevi |
+| Account | PDA seeds | Purpose |
 | --- | --- | --- |
-| Platform | `platform` | Yönetici, treasury, ödeme mint'i, token programı ve sabit `%2` komisyon |
-| Merchant | `merchant`, işletme cüzdanı | Yönetici tarafından zincirde doğrulanmış işletme |
-| Campaign | `campaign`, Merchant PDA, `campaign_id` little-endian `u64` | Fiyat, stok, tarih, limit ve iptal durumu |
-| BuyerCounter | `buyer`, Campaign PDA, müşteri cüzdanı | Müşteri başına satın alma sınırı |
-| Voucher | `voucher`, Campaign PDA, 32 bayt kupon hash'i | Tekil kupon, sahibi, tutarı ve kullanım durumu |
+| Platform | `platform` | Admin, treasury, payment mint, token program, and fixed 2% fee |
+| Merchant | `merchant`, merchant wallet | Admin-registered merchant |
+| Campaign | `campaign`, Merchant PDA, little-endian `campaign_id` u64 | Price, inventory, dates, limit, and cancellation |
+| BuyerCounter | `buyer`, Campaign PDA, customer wallet | Per-wallet purchase limit |
+| Voucher | `voucher`, Campaign PDA, 32-byte voucher hash | Owner, amount, and one-time status |
 
-Escrow, Campaign PDA'sının ödeme mint'i için associated token hesabıdır. Kampanya oluşturulurken açılır. Satın alma fiyatın tamamını escrow'a aktarır. `redeem_voucher`, müşteri ve işletme cüzdanlarının iki imzasını ister; `%2` komisyon treasury token hesabına, kalan tutar işletme token hesabına aynı işlemde aktarılır. İptal edilen kampanyada veya kuponun süresi dolduğunda kullanılmamış kuponun sahibi fiyatın tamamını geri alabilir. SPL token transferlerinden biri başarısızsa tüm Solana işlemi geri alınır.
+The escrow account is the Campaign PDA's associated token account for the payment mint. Purchase deposits the full amount. Redemption requires both customer and merchant signatures and atomically pays 2% to the treasury and 98% to the merchant. A failed token transfer rolls back the whole Solana transaction.
 
-İade otomatik transfer değildir: kupon sahibi `refund_voucher` işlemini kendi cüzdanıyla imzalar. Kupon, zincirde `Active` olarak kalır fakat iptal veya son kullanım zamanından sonra kullanılamaz; başarılı iade onu `Refunded` yapar. İkinci iade veya kullanılmış kuponun iadesi reddedilir. Kampanya iptali satışları ve kupon kullanımını durdurur, mevcut kullanılmamış kuponlar için anında iade hakkı açar. Escrow'daki tutar yalnızca alıcıya ait USDC token hesabına ve kuponun tam fiyatı kadar aktarılır.
+After cancellation or expiry, the owner of an unused active voucher may request a full refund. Refunds are **not** automatically transferred; the owner signs `refund_voucher`. A successful refund changes the voucher status to `Refunded`, preventing another refund or redemption. Cancellation stops new sales and redemption and makes outstanding unused vouchers immediately refundable.
 
-Kupon sırrı API tarafından oluşturulur ve veritabanında şifreli tutulur. Zincirde yalnızca 32 bayt SHA-256 özeti yer alır. Kullanımda sır zincire açıklanmaz; iki taraf aynı işlemi imzalar.
+The API creates a high-entropy voucher secret, stores it encrypted, and places only its 32-byte SHA-256 hash on-chain. Redemption does not reveal the secret on-chain; both parties sign the same transaction.
 
-Program henüz dağıtılmadı. Yönetici açık adresi, gerçek program anahtarı ve devnet USDC mint adresi belirlenmeden ödeme arayüzü kapalıdır. `cargo test` validator entegrasyon testi yerine geçmez; devnet kullanımı öncesi SBF derlemesi ve alım/kullanım/iade uçtan uca testleri gerekir.
-
-`initialize_platform` yöneticisi derleme sırasında `VALIDEX_ADMIN_WALLET` ortam değişkeninden programa sabitlenir. Boş veya geçersiz public key ile platform kurulumu reddedilir. `.env` dosyasının varlığı tek başına Anchor derleme ortamına değişkeni aktarmaz; gerçek devnet derlemesinden önce aynı adresi shell ortamında açıkça sağlayın. Private key veya seed phrase kullanmayın.
-
-## Yerel kontroller
+## Local checks
 
 ```bash
 cargo fmt --all -- --check
 cargo test -p validex --lib
-anchor build
+anchor build --arch v2
+# With a fresh local validator and the test-admin build deployed:
+node apps/web/tests/validex-localnet.mjs
 ```
 
-`cargo test` alan kurallarını, yanlış mint reddini, iki taraflı kullanım yetkisini, tekrar kullanımı ve tamsayı komisyon hesabını sınar. Token transferi ve Anchor hesap kısıtlarının tamamı ayrıca validator üzerinde entegrasyon testleriyle doğrulanmalıdır. Teslim öncesi kontrol sırası için [hackathon paketine](../docs/hackathon-submission.md) bakın.
+Nine Rust unit tests and the local-validator end-to-end test have passed. The validator test checks mint and escrow constraints, signatures, purchase limits, one-time redemption, fee splitting, cancellation, and refund replay. The Devnet program has been deployed; platform initialization and a real Solflare payment demonstration remain pending. See the [hackathon verification checklist](../docs/hackathon-submission.md).
+
+The current Devnet cluster rejects sBPFv3 builds, so use `anchor build --arch v2` for upgrades until its feature gate is activated. The build must include `VALIDEX_ADMIN_WALLET` in the Anchor process environment. Since the upgrade authority is the user's Solflare wallet, a future upgrade requires that wallet's explicit signature; the technical deployer key no longer has upgrade rights.

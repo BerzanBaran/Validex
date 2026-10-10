@@ -6,6 +6,7 @@ export type VoucherPass = {
   voucherId: string;
   campaignId: string;
   code: string;
+  secret: string;
   ownerWallet: string;
   chainVoucher?: string;
 };
@@ -19,6 +20,7 @@ export function encodeVoucherPass(voucher: Voucher): string {
     voucherId: voucher.id,
     campaignId: voucher.campaignId,
     code: voucher.code,
+    secret: voucher.secretBase64,
     ownerWallet: voucher.ownerWallet,
     chainVoucher: voucher.chainVoucher,
   } satisfies VoucherPass);
@@ -26,13 +28,13 @@ export function encodeVoucherPass(voucher: Voucher): string {
 
 export function decodeVoucherPass(raw: string): VoucherPass {
   if (new TextEncoder().encode(raw).byteLength > MAX_QR_BYTES) {
-    throw new Error("QR verisi izin verilen boyutu aşıyor.");
+    throw new Error("QR data exceeds the allowed size.");
   }
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
   } catch {
-    throw new Error("Bu QR kodu geçerli bir Validex kuponu değil.");
+    throw new Error("This QR code is not a valid Validex voucher.");
   }
   if (
     !payload || typeof payload !== "object" ||
@@ -41,10 +43,12 @@ export function decodeVoucherPass(raw: string): VoucherPass {
     !("voucherId" in payload) || typeof payload.voucherId !== "string" ||
     !("campaignId" in payload) || typeof payload.campaignId !== "string" ||
     !("code" in payload) || typeof payload.code !== "string" ||
+    !("secret" in payload) || typeof payload.secret !== "string" ||
+    !/^[A-Za-z0-9+/]{43}=$/.test(payload.secret) ||
     !("ownerWallet" in payload) || typeof payload.ownerWallet !== "string" ||
     ("chainVoucher" in payload && payload.chainVoucher !== undefined && typeof payload.chainVoucher !== "string")
   ) {
-    throw new Error("Bu QR kodu geçerli bir Validex kuponu değil.");
+    throw new Error("This QR code is not a valid Validex voucher.");
   }
   return payload as VoucherPass;
 }

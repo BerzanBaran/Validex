@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-validex = "F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe"
+validex = "5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh"
 
 [programs.devnet]
-validex = "F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe"
+validex = "5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh"
 
 [provider]
 cluster = "localnet"

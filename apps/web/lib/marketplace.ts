@@ -39,6 +39,7 @@ export type Voucher = {
   purchasedAt: string;
   expiresAt: string;
   code: string;
+  secretBase64: string;
   status: "pending" | "active" | "redeemed" | "refunded" | "expired" | "failed";
   redeemedAt?: string;
   chainVoucher?: string;
@@ -52,12 +53,13 @@ export function voucherFromApi(item: ApiVoucher, walletAddress: string, campaign
     id: item.id,
     campaignId: item.campaign_id,
     ownerWallet: walletAddress,
-    merchant: item.merchant_name ?? campaign?.merchant ?? "İşletme",
-    title: item.campaign_title ?? campaign?.title ?? "Kupon",
+    merchant: item.merchant_name ?? campaign?.merchant ?? "Merchant",
+    title: item.campaign_title ?? campaign?.title ?? "Voucher",
     priceUsdc: item.price_minor != null ? item.price_minor / 1_000_000 : campaign?.priceUsdc ?? 0,
     purchasedAt: item.purchased_at ?? "",
     expiresAt: item.expires_at,
     code: `VLDX-${item.voucher_hash_hex.slice(0, 12).toUpperCase()}`,
+    secretBase64: item.secret_base64,
     status: item.status === "pending_chain" ? "pending" : item.status,
     redeemedAt: item.redeemed_at ?? undefined,
     chainVoucher: item.onchain_address ?? undefined,
@@ -81,7 +83,7 @@ export function useMarketplace() {
       setCampaignError(null);
       return remote;
     } catch (error) {
-      setCampaignError(error instanceof Error ? error.message : "Kampanyalar yüklenemedi.");
+      setCampaignError(error instanceof Error ? error.message : "Could not load offers.");
       throw error;
     } finally {
       setReady(true);
@@ -136,7 +138,7 @@ export function useMarketplace() {
     } catch (error) {
       if (requestId === voucherRequest.current) {
         setVouchers([]);
-        setVoucherError(error instanceof Error ? error.message : "Kuponlar API'den yüklenemedi.");
+        setVoucherError(error instanceof Error ? error.message : "Could not load vouchers from the API.");
       }
       throw error;
     } finally {
@@ -147,16 +149,16 @@ export function useMarketplace() {
   const purchaseCampaign = useCallback(async (
     campaignId: string, ownerWallet: string, onSubmitted?: (signature: string) => void,
   ) => {
-    if (!chainConfigured()) throw new Error("Zincir ödemesi kurulmadan USDC tahsil edilmez.");
+    if (!chainConfigured()) throw new Error("USDC cannot be charged until on-chain payments are configured.");
     const campaign = await getOnchainCampaign(campaignId);
     if (campaign.status !== "published" || !campaign.chainCampaign ||
         campaign.sold >= campaign.stock || new Date(campaign.expiresAt).getTime() <= Date.now()) {
-      throw new Error("Bu kampanya şu anda satın alınamıyor.");
+      throw new Error("This offer is not available for purchase right now.");
     }
-    if (campaign.ownerWallet === ownerWallet) throw new Error("Kendi işletmenizin kuponunu satın alamazsınız.");
+    if (campaign.ownerWallet === ownerWallet) throw new Error("You cannot buy a voucher from your own business.");
     const remote = await listMyVouchers(ownerWallet);
     if (remote.some((item) => item.campaign_id === campaignId && item.status === "active")) {
-      throw new Error("Bu kampanya için zaten aktif bir kuponunuz var.");
+      throw new Error("You already have an active voucher for this offer.");
     }
     const intent = remote.find((item) => item.campaign_id === campaignId && item.status === "pending_chain")
       ?? await createPurchaseIntent(campaignId, ownerWallet);
@@ -167,9 +169,9 @@ export function useMarketplace() {
     const address = voucherPda(config, new PublicKey(campaign.chainCampaign), hash);
     const existingStatus = await readVoucherStatus(config, address);
     if (existingStatus !== "missing") {
-      if (existingStatus !== "active") throw new Error("Kupon zincirde zaten işlenmiş; yeniden ödeme yapmayın.");
+      if (existingStatus !== "active") throw new Error("The voucher was already processed on-chain; do not pay again.");
       const signature = (await config.connection.getSignaturesForAddress(address, { limit: 1 }, "finalized"))[0]?.signature;
-      if (!signature) throw new Error("Zincirdeki ödeme imzası bulunamadı. Yeniden ödeme yapmayın.");
+      if (!signature) throw new Error("The on-chain payment signature was not found. Do not pay again.");
       const confirmed = await confirmVoucherPurchase(intent.id, ownerWallet, address.toBase58(), signature);
       const voucher = voucherFromApi(confirmed, ownerWallet, campaign);
       setVouchers((current) => [voucher, ...current.filter((item) => item.id !== voucher.id)]);
@@ -178,7 +180,7 @@ export function useMarketplace() {
     }
     const { instruction, priceMinor } = await purchaseInstruction(config, ownerWallet, campaign.chainCampaign, hash);
     if (priceMinor !== usdcMinor(campaign.priceUsdc)) {
-      throw new Error("API fiyatı zincirdeki kampanya fiyatıyla eşleşmiyor. Ödeme durduruldu.");
+      throw new Error("The API price does not match the on-chain offer price. Payment was stopped.");
     }
     const signature = await sendWalletTransaction(config, ownerWallet, instruction, address, onSubmitted);
     const confirmed = await confirmVoucherPurchase(intent.id, ownerWallet, address.toBase58(), signature);

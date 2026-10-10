@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -8,6 +9,7 @@ from fastapi import HTTPException
 
 from app.api.routes import vouchers as routes
 from app.api.routes.merchants import campaign_scan_access
+from app.domain.vouchers import hash_voucher_secret
 from app.models.entities import (
     AuditLog,
     Campaign,
@@ -67,11 +69,12 @@ def setup_scan():
         title="Coffee",
         price_minor=5_000_000,
     )
+    voucher_secret = bytes([7]) * 32
     voucher = Voucher(
         id=uuid.uuid4(),
         campaign_id=campaign.id,
         owner_user_id=owner.id,
-        voucher_hash=bytes([7]) * 32,
+        voucher_hash=hash_voucher_secret(voucher_secret),
         onchain_address=address(5),
         status=VoucherStatus.ACTIVE,
         expires_at=datetime.now(UTC) + timedelta(days=1),
@@ -85,6 +88,7 @@ def setup_scan():
         voucherId=voucher.id,
         campaignId=campaign.id,
         code=f"VLDX-{voucher.voucher_hash.hex()[:12].upper()}",
+        secret=base64.b64encode(voucher_secret).decode("ascii"),
         ownerWallet=owner.wallet_address,
         chainVoucher=voucher.onchain_address,
     )
@@ -138,6 +142,22 @@ def test_owner_can_prepare_redemption_after_api_and_chain_check(monkeypatch):
 def test_fake_qr_is_rejected_and_audited():
     session, staff_user, payload = setup_scan()
     bad = payload.model_copy(update={"code": "VLDX-FAKE"})
+
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(routes.scan_voucher(bad, session, staff_user))
+
+    assert error.value.status_code == 403
+    assert any(
+        isinstance(item, AuditLog) and item.action == "security.qr_rejected"
+        for item in session.added
+    )
+
+
+def test_copied_public_reference_without_secret_is_rejected_and_audited():
+    session, staff_user, payload = setup_scan()
+    bad = payload.model_copy(
+        update={"secret": base64.b64encode(bytes([8]) * 32).decode("ascii")}
+    )
 
     with pytest.raises(HTTPException) as error:
         asyncio.run(routes.scan_voucher(bad, session, staff_user))

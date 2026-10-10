@@ -35,6 +35,14 @@ export default function VoucherDetailPage() {
   }, []);
 
   useEffect(() => {
+    const incoming = new URLSearchParams(window.location.search).get("handoff");
+    if (!incoming || incoming.length > 4096) return;
+    setHandoff(incoming);
+    setMessage("Merchant signature received. Review and approve the redemption with your wallet.");
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+  }, []);
+
+  useEffect(() => {
     if (!payload) return;
     QRCode.toDataURL(payload, { width: 420, margin: 2, color: { dark: "#17251e", light: "#ffffff" }, errorCorrectionLevel: "M" })
       .then(setQrUrl)
@@ -52,27 +60,27 @@ export default function VoucherDetailPage() {
       setBusy(true);
       if (voucher.status === "pending") {
         await marketplace.syncMyVouchers(walletAddress);
-        setMessage("Kupon kaydı yenilendi. Hâlâ bekliyorsa tekrar ödeme göndermeden önce zincir işlemini kontrol edin.");
+        setMessage("Voucher refreshed. If it is still pending, check the on-chain transaction before paying again.");
         return;
       }
-      if (!voucher.chainVoucher) throw new Error("Kuponun zincir adresi API'de bulunamadı.");
+      if (!voucher.chainVoucher) throw new Error("The voucher's on-chain address was not found in the API.");
       const config = await loadChain();
       const status = await readVoucherStatus(config, new PublicKey(voucher.chainVoucher));
       if (status === "redeemed" && voucher.status !== "redeemed") {
         const signature = (await config.connection.getSignaturesForAddress(new PublicKey(voucher.chainVoucher), { limit: 1 }))[0]?.signature;
-        if (!signature) throw new Error("Kupon kullanımı bulundu ancak imza okunamadı.");
+        if (!signature) throw new Error("Redemption was found, but its transaction signature could not be read.");
         await confirmVoucherRedemption(voucher.id, walletAddress!, voucher.chainVoucher, signature);
         await marketplace.syncMyVouchers(walletAddress);
       }
       if (status === "refunded" && voucher.status !== "refunded") {
         const signature = (await config.connection.getSignaturesForAddress(new PublicKey(voucher.chainVoucher), { limit: 1 }))[0]?.signature;
-        if (!signature) throw new Error("İade bulundu ancak işlem imzası okunamadı.");
+        if (!signature) throw new Error("Refund was found, but its transaction signature could not be read.");
         await confirmVoucherRefund(voucher.id, walletAddress!, voucher.chainVoucher, signature);
         await marketplace.syncMyVouchers(walletAddress);
       }
-      setMessage(status === "missing" ? "Zincirde henüz kupon bulunamadı. İşlem durumunu kontrol edin; yeniden ödeme yapmayın." : `Zincir durumu: ${status}.`);
+      setMessage(status === "missing" ? "Voucher not found on-chain yet. Check the transaction before paying again." : `On-chain status: ${status}.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Zincir durumu alınamadı.");
+      setMessage(error instanceof Error ? error.message : "Could not read the on-chain status.");
     } finally { setBusy(false); }
   }
 
@@ -85,9 +93,9 @@ export default function VoucherDetailPage() {
       await confirmVoucherRedemption(voucher.id, walletAddress, voucher.chainVoucher, signature);
       await marketplace.syncMyVouchers(walletAddress);
       setHandoff("");
-      setMessage(`Kupon zincirde kullanıldı. İşlem: ${signature}`);
+      setMessage(`Voucher redeemed on-chain. Transaction: ${signature}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Kupon kullanımı tamamlanamadı.");
+      setMessage(error instanceof Error ? error.message : "Voucher redemption could not be completed.");
     } finally { setBusy(false); }
   }
 
@@ -99,42 +107,42 @@ export default function VoucherDetailPage() {
       const config = await loadChain();
       const { instruction, voucher: voucherPda } = await refundInstruction(config, voucher.chainVoucher, walletAddress);
       const signature = await sendWalletTransaction(config, walletAddress, instruction, voucherPda);
-      if (await readVoucherStatus(config, voucherPda) !== "refunded") throw new Error("İade zincirde henüz doğrulanamadı; tekrar göndermeyin.");
+      if (await readVoucherStatus(config, voucherPda) !== "refunded") throw new Error("The refund is not yet verified on-chain; do not submit it again.");
       await confirmVoucherRefund(voucher.id, walletAddress, voucher.chainVoucher, signature);
       await marketplace.syncMyVouchers(walletAddress);
-      setMessage(`USDC iadesi zincirde onaylandı. İşlem: ${signature}`);
+      setMessage(`USDC refund confirmed on-chain. Transaction: ${signature}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "İade tamamlanamadı.");
+      setMessage(error instanceof Error ? error.message : "Refund could not be completed.");
     } finally { setBusy(false); }
   }
 
-  if (!voucher) return <main className="dashboardPage"><DashboardHeader role="customer" onAddressChange={setWalletAddress} /><div className="pageState">{!walletAddress ? "Kuponu görmek için cüzdanınızı bağlayın." : marketplace.vouchersLoading ? "Kupon API'den yükleniyor…" : marketplace.voucherError ? marketplace.voucherError : "Kupon bulunamadı."} <Link href="/musteri">Müşteri paneline dön</Link></div></main>;
+  if (!voucher) return <main className="dashboardPage"><DashboardHeader role="customer" onAddressChange={setWalletAddress} /><div className="pageState">{!walletAddress ? "Connect your wallet to view this voucher." : marketplace.vouchersLoading ? "Loading voucher…" : marketplace.voucherError ? marketplace.voucherError : "Voucher not found."} <Link href="/musteri">Back to customer dashboard</Link></div></main>;
   const belongsToWallet = walletAddress === voucher.ownerWallet;
   const shareUrl = typeof window === "undefined" ? "" : window.location.href;
 
   return (
     <main className="dashboardPage voucherDetailPage">
       <DashboardHeader role="customer" onAddressChange={setWalletAddress} />
-      <div className="dashboardShell breadcrumb"><Link href="/musteri">← Kuponlarım</Link><span>/</span><span>{voucher.merchant}</span></div>
-      {!walletAddress ? <div className="dashboardShell notice">QR kuponunuzu görmek için cüzdanınızı bağlayın.</div> : null}
-      {walletAddress && !belongsToWallet ? <div className="dashboardShell notice errorNotice">Bu kupon bağlı cüzdana ait değil.</div> : null}
+      <div className="dashboardShell breadcrumb"><Link href="/musteri">← My vouchers</Link><span>/</span><span>{voucher.merchant}</span></div>
+      {!walletAddress ? <div className="dashboardShell notice">Connect your wallet to view the voucher QR code.</div> : null}
+      {walletAddress && !belongsToWallet ? <div className="dashboardShell notice errorNotice">This voucher does not belong to the connected wallet.</div> : null}
       <section className="dashboardShell voucherPassLayout">
         <article className="voucherPass">
-          <div className="voucherPassHeader"><div><p className="eyebrow">VALIDEX PASS</p><h1>{voucher.title}</h1><p>{voucher.merchant}</p></div><StatusBadge tone={action === "redeem" ? "success" : "neutral"}>{voucher.status === "pending" ? "ZİNCİR BEKLENİYOR" : action === "refund" ? "İADE TALEP EDİLEBİLİR" : action === "redeem" ? "AKTİF" : voucher.status === "refunded" ? "İADE EDİLDİ" : voucher.status === "redeemed" ? "KULLANILDI" : "KAPALI"}</StatusBadge></div>
+          <div className="voucherPassHeader"><div><p className="eyebrow">VALIDEX PASS</p><h1>{voucher.title}</h1><p>{voucher.merchant}</p></div><StatusBadge tone={action === "redeem" ? "success" : "neutral"}>{voucher.status === "pending" ? "PENDING ON-CHAIN" : action === "refund" ? "REFUND AVAILABLE" : action === "redeem" ? "ACTIVE" : voucher.status === "refunded" ? "REFUNDED" : voucher.status === "redeemed" ? "REDEEMED" : "CLOSED"}</StatusBadge></div>
           <div className="perforation" />
           <div className="qrStage">
-            {belongsToWallet && action === "redeem" && qrUrl ? <img src={qrUrl} alt="Tek kullanımlık Validex kupon QR kodu" /> : <div className="qrLocked">{voucher.status === "pending" ? "Zincir onayı bekleniyor" : action === "refund" ? "Kupon kullanıma kapalı; USDC iadesi talep edilebilir" : voucher.status === "redeemed" ? "Kupon kullanıldı" : voucher.status === "refunded" ? "İade edildi" : voucher.status === "expired" || voucher.status === "failed" ? "Kupon kapalı" : walletAddress ? "Cüzdan eşleşmedi" : "Cüzdan bağlantısı gerekli"}</div>}
-            <small>İşletme görevlisine bu ekranı gösterin</small>
+            {belongsToWallet && action === "redeem" && qrUrl ? <img src={qrUrl} alt="Single-use Validex voucher QR code" /> : <div className="qrLocked">{voucher.status === "pending" ? "Waiting for on-chain confirmation" : action === "refund" ? "Voucher closed; USDC refund available" : voucher.status === "redeemed" ? "Voucher redeemed" : voucher.status === "refunded" ? "Refunded" : voucher.status === "expired" || voucher.status === "failed" ? "Voucher closed" : walletAddress ? "Wrong wallet" : "Connect your wallet"}</div>}
+            <small>Show this screen to the merchant</small>
           </div>
-          <div className="voucherPassCode"><span>KUPON REFERANSI</span><strong>{belongsToWallet ? voucher.code : "••••••••••••"}</strong></div>
+          <div className="voucherPassCode"><span>VOUCHER REFERENCE</span><strong>{belongsToWallet ? voucher.code : "••••••••••••"}</strong></div>
         </article>
         <aside className="voucherAside">
-          <p className="eyebrow">KUPON DETAYI</p><h2>{action === "refund" ? "İade hakkınız var." : action === "redeem" ? "Kullanıma hazır." : "Kupon durumu"}</h2>
-          <p>{action === "refund" ? "Kampanya iptal edildiği veya kullanım süresi dolduğu için kullanılmamış kuponun USDC tutarını cüzdanınızla escrow'dan geri isteyebilirsiniz. İade otomatik gönderilmez." : "İşletme QR ile kuponu bulup işlemi imzalar; USDC ödemesi ancak sizin ikinci cüzdan imzanızla tamamlanır."}</p>
-          <dl><div><dt>Satın alma</dt><dd>{voucher.purchasedAt ? new Date(voucher.purchasedAt).toLocaleDateString("tr-TR") : "Zincir onayı bekleniyor"}</dd></div><div><dt>Son kullanım</dt><dd>{voucher.expiresAt}</dd></div><div><dt>Ödenen</dt><dd>{voucher.priceUsdc} USDC</dd></div><div><dt>Ağ</dt><dd>Solana Devnet</dd></div></dl>
-          <button className="secondaryButton wide" onClick={() => setShareOpen(true)} type="button">Kupon bağlantısını paylaş</button>
-          {belongsToWallet && chainConfigured() ? <div className="manualCodeForm"><button className="secondaryButton wide" disabled={busy} onClick={() => void checkChainStatus()} type="button">Zincir durumunu kontrol et</button>{action === "redeem" ? <><label>İşletmenin imzaladığı işlem metni<textarea value={handoff} onChange={(event) => setHandoff(event.target.value)} placeholder="İşletmeden gelen imzalı işlemi buraya yapıştırın" /></label><button className="actionButton" disabled={busy || !handoff.trim()} onClick={() => void approveRedemption()} type="button">Kupon kullanımını cüzdanımla onayla</button></> : null}{action === "refund" ? <button className="secondaryButton wide" disabled={busy} onClick={() => void requestRefund()} type="button">Escrow'dan USDC iadesi talep et</button> : null}{message ? <p role="status">{message}</p> : null}</div> : null}
-          <Link className="textLink" href={`/kampanyalar/${voucher.campaignId}`}>Kampanyayı görüntüle →</Link>
+          <p className="eyebrow">VOUCHER DETAILS</p><h2>{action === "refund" ? "Your refund is ready." : action === "redeem" ? "Ready to redeem." : "Voucher status"}</h2>
+          <p>{action === "refund" ? "This offer was cancelled or expired. You can request the full USDC amount back from escrow with your wallet. Refunds are not sent automatically." : "The merchant scans the QR and signs the transaction. USDC is released only after you add your wallet signature."}</p>
+          <dl><div><dt>Purchased</dt><dd>{voucher.purchasedAt ? new Date(voucher.purchasedAt).toLocaleDateString("en-US") : "Pending on-chain"}</dd></div><div><dt>Expires</dt><dd>{voucher.expiresAt}</dd></div><div><dt>Paid</dt><dd>{voucher.priceUsdc} USDC</dd></div><div><dt>Network</dt><dd>Solana Devnet</dd></div></dl>
+          <button className="secondaryButton wide" onClick={() => setShareOpen(true)} type="button">Share voucher link</button>
+          {belongsToWallet && chainConfigured() ? <div className="manualCodeForm"><button className="secondaryButton wide" disabled={busy} onClick={() => void checkChainStatus()} type="button">Check on-chain status</button>{action === "redeem" ? <><label>Transaction signed by the merchant<textarea value={handoff} onChange={(event) => setHandoff(event.target.value)} placeholder="Paste the merchant-signed transaction here" /></label><button className="actionButton" disabled={busy || !handoff.trim()} onClick={() => void approveRedemption()} type="button">Approve redemption with my wallet</button></> : null}{action === "refund" ? <button className="secondaryButton wide" disabled={busy} onClick={() => void requestRefund()} type="button">Request USDC refund from escrow</button> : null}{message ? <p role="status">{message}</p> : null}</div> : null}
+          <Link className="textLink" href={`/kampanyalar/${voucher.campaignId}`}>View offer →</Link>
         </aside>
       </section>
       {shareOpen ? <ShareDialog title={voucher.title} url={shareUrl} onClose={() => setShareOpen(false)} /> : null}

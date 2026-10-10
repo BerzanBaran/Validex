@@ -11,18 +11,19 @@ use contexts::*;
 use error::ValidexError;
 use math::split_payment;
 use rules::{
-    assert_cancellable, assert_payment_mint, assert_purchasable,
-    assert_redeemable, assert_redemption_authorities, assert_refundable,
+    assert_cancellable, assert_payment_mint, assert_purchasable, assert_redeemable,
+    assert_redemption_authorities, assert_refundable,
 };
 use state::*;
 
-declare_id!("F49cTqvPrtcdH4PAi5FcxqzTDG7xFoHS1DVTL8Xadaqe");
+declare_id!("5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh");
 
 // Embedded at build time. A missing or invalid address disables initialization.
 fn configured_admin() -> Result<Pubkey> {
-    let address = option_env!("VALIDEX_ADMIN_WALLET")
-        .ok_or(ValidexError::UnauthorizedAdmin)?;
-    address.parse().map_err(|_| error!(ValidexError::UnauthorizedAdmin))
+    let address = option_env!("VALIDEX_ADMIN_WALLET").ok_or(ValidexError::UnauthorizedAdmin)?;
+    address
+        .parse()
+        .map_err(|_| error!(ValidexError::UnauthorizedAdmin))
 }
 
 #[program]

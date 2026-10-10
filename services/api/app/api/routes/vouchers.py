@@ -1,4 +1,5 @@
 import base64
+import binascii
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -93,6 +94,12 @@ async def scan_voucher(
         await reject("Merchant staff access required", "security.unauthorized_scan")
     voucher = await session.get(Voucher, payload.voucherId)
     owner = await session.get(User, voucher.owner_user_id) if voucher else None
+    try:
+        presented_secret = base64.b64decode(payload.secret, validate=True)
+    except (binascii.Error, ValueError):
+        await reject("Voucher secret is invalid")
+    if len(presented_secret) != 32:
+        await reject("Voucher secret is invalid")
     if (
         payload.v != 1
         or payload.type != "validex-voucher"
@@ -105,6 +112,9 @@ async def scan_voucher(
         or voucher.onchain_address != payload.chainVoucher
         or owner.wallet_address != payload.ownerWallet
         or payload.code != f"VLDX-{voucher.voucher_hash.hex()[:12].upper()}"
+        or not secrets.compare_digest(
+            hash_voucher_secret(presented_secret), voucher.voucher_hash
+        )
     ):
         await reject("Voucher is invalid, expired or already used")
     try:

@@ -15,14 +15,14 @@ export type ApiVoucher = {
 
 async function request(path: string, walletAddress: string, init?: RequestInit): Promise<ApiVoucher | ApiVoucher[]> {
   const session = getStoredSession(walletAddress);
-  if (!session) throw new Error("Cüzdan oturumu bulunamadı. Yeniden bağlayın.");
+  if (!session) throw new Error("Wallet session not found. Reconnect your wallet.");
   const response = await fetch(`${API_URL}/api/v1/vouchers${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.accessToken}`, ...init?.headers },
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { detail?: string } | null;
-    throw new Error(body?.detail ?? "Kupon API işlemi tamamlanamadı.");
+    throw new Error(body?.detail ?? "The voucher API action could not be completed.");
   }
   return response.json() as Promise<ApiVoucher | ApiVoucher[]>;
 }

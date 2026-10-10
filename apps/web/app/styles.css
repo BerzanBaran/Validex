@@ -151,6 +151,7 @@ button { font:inherit; }
 .perforation { height:1px; margin:0 20px; border-top:2px dashed #d7d8d2; position:relative; }.perforation:before,.perforation:after{content:"";position:absolute;top:-13px;width:24px;height:24px;background:#f4f1e9;border-radius:50%}.perforation:before{left:-33px}.perforation:after{right:-33px}
 .qrStage { display:grid; place-items:center; padding:32px; }.qrStage img{width:min(330px,100%);height:auto;border-radius:14px}.qrStage small{margin-top:12px;color:#7a847d}
 .qrLocked { display:grid; place-items:center; width:min(330px,100%); aspect-ratio:1; color:#78837b; background:repeating-linear-gradient(45deg,#f0f0eb,#f0f0eb 8px,#e7e8e2 8px,#e7e8e2 16px); border-radius:14px; font-weight:700; }
+.handoffCard { margin-top:22px; padding-top:22px; border-top:1px solid var(--line); }.handoffCard>p:not(.eyebrow){color:#68756d;font-size:13px;line-height:1.55}.handoffQr{display:block;width:min(280px,100%);height:auto;margin:14px auto;border-radius:14px}.handoffCard details{margin-top:12px}.handoffCard summary{cursor:pointer;color:#68756d;font-size:12px;font-weight:700}.handoffCard details label{margin-top:12px}
 .voucherPassCode { display:flex; justify-content:space-between; align-items:center; gap:15px; padding:20px 30px; background:#203b2d; color:white; }.voucherPassCode span{color:#b7c8bd;font-size:9px;letter-spacing:1.4px}.voucherPassCode strong{font:600 16px monospace;letter-spacing:1px}
 .voucherAside { padding:32px; }.voucherAside h2{font:600 36px "Manrope";letter-spacing:-1.8px}.voucherAside>p:not(.eyebrow){color:#68756d;line-height:1.6}.voucherAside .textLink{display:block;margin-top:20px;text-align:center;font-size:13px}
 
@@ -211,9 +212,9 @@ body { color:var(--ink); background:var(--paper); }
 .proofMark { display:grid; place-items:center; width:27px; height:27px; color:var(--coral); border:1px solid #efb09d; border-radius:50%; font-size:15px; }
 .heroArt { position:relative; min-height:565px; overflow:hidden; background:radial-gradient(circle at 54% 48%,#ffd2ab 0 22%,transparent 23%),radial-gradient(circle at 83% 19%,#f6b9a8 0 4%,transparent 5%),#f6d0bd; border-radius:46% 46% 26px 26px; isolation:isolate; }
 .heroArt:before { content:""; position:absolute; z-index:-1; width:440px; height:440px; left:50%; top:50%; border:1px solid rgba(115,57,62,.23); border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 0 70px rgba(255,255,255,.1),0 0 0 145px rgba(255,255,255,.08); }
-.heroArtLabel,.artCounter { position:absolute; z-index:2; left:30px; color:#6f4050; font-size:10px; font-weight:800; letter-spacing:1.6px; }
-.heroArtLabel { top:28px; }.artCounter { bottom:25px; }.artCounter span{margin:0 7px;color:#b47b75}
-.hero3d { position:absolute; inset:0; }
+.heroArtLabel,.artCounter { position:absolute; z-index:5; left:30px; color:#6f4050; font-size:10px; font-weight:800; letter-spacing:1.6px; }
+.heroArtLabel { top:28px; left:50%; transform:translateX(-50%); white-space:nowrap; }.artCounter { bottom:25px; }.artCounter span{margin:0 7px;color:#b47b75}
+.hero3d { position:absolute; z-index:1; inset:0; }
 .hero3d canvas { display:block; width:100%; height:100%; }
 .hero3dFallback { position:absolute; left:50%; top:50%; display:flex; flex-direction:column; justify-content:space-between; width:260px; height:350px; padding:24px; color:var(--ink); background:#ffbd9f; border:8px solid #e7967c; border-radius:25px; box-shadow:20px 22px 45px rgba(80,42,60,.25); transform:translate(-50%,-50%) rotate(-8deg); }
 .hero3dFallback span { font-weight:800; }.hero3dFallback strong{font:800 44px/.98 "Manrope"}.hero3dFallback small{border-top:2px dashed currentColor;padding-top:13px;font-weight:800}
@@ -250,8 +251,82 @@ body { color:var(--ink); background:var(--paper); }
 .dashboardContent,.vouchersSection{padding-top:45px}.contentHeading h2,.formHeading h2{font-size:32px;letter-spacing:-1.7px}.headingSpark{color:var(--coral);font-size:25px}
 .contentHeading input,.campaignForm input,.campaignForm textarea,.campaignForm select,.manualCodeForm input{background:#fffdf8;border-color:#e7d8ce}.contentHeading input:focus,.campaignForm input:focus,.campaignForm textarea:focus,.campaignForm select:focus{border-color:var(--coral);box-shadow:0 0 0 3px rgba(239,112,78,.13)}
 .marketCard,.campaignForm,.merchantCampaigns{background:#fffcf7;border:1px solid #ecded3;box-shadow:0 10px 30px rgba(100,60,72,.05)}.marketCard{transition:transform .25s,box-shadow .25s}.marketCard:hover{transform:translateY(-4px);box-shadow:0 18px 34px rgba(100,60,72,.12)}.marketVisual{position:relative;overflow:hidden;height:185px}.marketVisual:after{content:"";position:absolute;right:-54px;bottom:-103px;width:275px;height:275px;border:43px solid rgba(255,250,239,.36);border-radius:50%}.marketVisual>span,.marketVisual>div{position:relative;z-index:2}.marketVisual>span{background:#fff9ed;font-weight:700}.marketVisual i{position:absolute;right:25px;top:10px;color:rgba(255,250,239,.76);font-size:57px;font-style:normal}.marketCopy>p:first-child{color:#a56659}.marketCopy .description,.stockLine{color:#82757a}
-.actionButton{background:var(--plum);border-radius:10px}.actionButton:hover{background:#65405a}.secondaryButton{border-color:#dec8bd}.secondaryButton:hover{background:#fff0e4}.emptyState{color:#826f77;background:#fffaf4;border-color:#e3c7b8}.voucherRow,.metricGrid>div,.managementCard,.detailInfoGrid article{background:#fffcf7;border:1px solid #eedfd5}.voucherRow:hover{border-color:#e9a48e}.voucherCode{background:#fff0e3}.statusPill{color:#7e493a;background:#ffe0cd}.feePreview{background:#fff0e0}.metricGrid>div{position:relative;overflow:hidden;border-radius:16px}.metricGrid>div:after{content:"✳";position:absolute;right:10px;bottom:-36px;color:#f5e2d5;font-size:100px}.metricGrid strong{position:relative;z-index:1}.onboardingCard{background:var(--plum)}.onboardingCard .actionButton{background:#ffbd9f;color:var(--ink)}.demoBanner{background:rgba(72,43,67,.96)}.walletMenu{background:#fffaf3;border-color:#ead8cc}.walletMenu>a:hover,.walletMenu>button:hover{background:#fff0e4}.voucherPassCode,.adminMetric{background:var(--plum)}.shareGlyph{background:var(--coral)}
+.actionButton{background:var(--plum);border-radius:10px}.actionButton:hover{background:#65405a}.secondaryButton{border-color:#dec8bd}.secondaryButton:hover{background:#fff0e4}.emptyState{color:#826f77;background:#fffaf4;border-color:#e3c7b8}.grid>.emptyState{grid-column:1/-1}.loadingState{position:relative;overflow:hidden}.loadingState:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%);animation:loadingSweep 1.4s ease-in-out infinite}@keyframes loadingSweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}.voucherRow,.metricGrid>div,.managementCard,.detailInfoGrid article{background:#fffcf7;border:1px solid #eedfd5}.voucherRow:hover{border-color:#e9a48e}.voucherCode{background:#fff0e3}.statusPill{color:#7e493a;background:#ffe0cd}.feePreview{background:#fff0e0}.metricGrid>div{position:relative;overflow:hidden;border-radius:16px}.metricGrid>div:after{content:"✳";position:absolute;right:10px;bottom:-36px;color:#f5e2d5;font-size:100px}.metricGrid strong{position:relative;z-index:1}.onboardingCard{background:var(--plum)}.onboardingCard .actionButton{background:#ffbd9f;color:var(--ink)}.demoBanner{background:rgba(72,43,67,.96)}.walletMenu{background:#fffaf3;border-color:#ead8cc}.walletMenu>a:hover,.walletMenu>button:hover{background:#fff0e4}.voucherPassCode,.adminMetric{background:var(--plum)}.shareGlyph{background:var(--coral)}
 @media(max-width:1050px){.how{grid-template-columns:1fr;gap:35px}.homePage .hero{gap:10px}.homePage .hero h1{font-size:clamp(52px,6vw,75px)}.steps{gap:12px}}
 @media(max-width:800px){.homePage .hero{grid-template-columns:1fr;gap:30px}.heroArt{min-height:520px;border-radius:38% 38% 22px 22px}.heroProof{margin-top:35px}.joinInner{grid-template-columns:1fr;gap:30px}.homePage .navLinks>a:not(.wallet){display:none}}
-@media(max-width:620px){.announcement{font-size:9px}.homePage .nav{height:70px}.homePage .hero{padding-block:45px}.homePage .hero h1{font-size:clamp(48px,12vw,69px);letter-spacing:-3.5px}.homePage .lead{font-size:15px}.homePage .heroActions{align-items:flex-start;gap:20px}.heroArt{min-height:420px}.hero3dFallback{width:210px;height:285px}.hero3dFallback strong{font-size:36px}.floatNote{right:8px;bottom:54px}.campaignSection{padding:70px 0}.how{padding-block:75px}.steps{grid-template-columns:1fr}.steps>div{min-height:0}.joinBand h2{letter-spacing:-2px}.homeFooter{align-items:flex-start;flex-direction:column;justify-content:center;padding-block:24px}.dashboardHero{padding-block:42px}.dashboardHero h1{font-size:43px;letter-spacing:-2.5px}.balanceCard,.verificationCard{min-height:155px}.contentHeading h2{font-size:28px}}
+@media(max-width:620px){.announcement{font-size:9px}.homePage .nav{height:70px}.homePage .hero{padding-block:45px}.homePage .hero h1{font-size:clamp(48px,12vw,69px);letter-spacing:-3.5px}.homePage .lead{font-size:15px}.homePage .heroActions{align-items:flex-start;gap:20px}.heroArt{min-height:420px}.heroArtLabel{right:auto;left:50%;max-width:calc(100% - 40px);overflow:hidden;text-overflow:ellipsis;transform:translateX(-50%)}.hero3dFallback{width:210px;height:285px}.hero3dFallback strong{font-size:36px}.floatNote{right:8px;bottom:54px}.campaignSection{padding:70px 0}.how{padding-block:75px}.steps{grid-template-columns:1fr}.steps>div{min-height:0}.joinBand h2{letter-spacing:-2px}.homeFooter{align-items:flex-start;flex-direction:column;justify-content:center;padding-block:24px}.dashboardHero{padding-block:42px}.dashboardHero h1{font-size:43px;letter-spacing:-2.5px}.balanceCard,.verificationCard{min-height:155px}.contentHeading h2{font-size:28px}.demoBanner{position:static;width:min(100% - 24px,1220px);margin:32px auto 0;transform:none;white-space:normal;text-align:center}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.wallet,.primary,.marketCard,.campaignCard{transition:none}.wallet:hover,.primary:hover,.marketCard:hover,.campaignCard:hover{transform:none}}
+
+/* Navigation and persistent light/dark theme */
+.homePage .nav { gap:28px; }
+.homePage .navLinks { gap:4px; padding:6px; background:#ffeadc; border:1px solid #f3c7ab; border-radius:999px; box-shadow:0 6px 18px rgba(128,69,61,.08); }
+.homePage .navLinks a { padding:10px 15px; border-radius:999px; font-size:12px; }
+.homePage .navLinks a:hover { color:#49263b!important; background:#ffbd91; }
+.navActions,.dashboardActions { display:flex; align-items:center; justify-content:flex-end; gap:11px; }
+.dashboardActions { justify-self:end; }
+.navActions .wallet,.dashboardActions .wallet { white-space:nowrap; }
+.navActions .wallet { background:linear-gradient(120deg,#f07850,#e95c6b); box-shadow:0 6px 0 #efc39d; }
+.navActions .wallet:hover { background:linear-gradient(120deg,#fc9360,#ea6e78); }
+.themeToggle { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:78px; padding:10px 12px; color:#492e44; background:#fff1e6; border:1px solid #ecbfab; border-radius:999px; font:700 11px "DM Sans",sans-serif; cursor:pointer; transition:background .2s,transform .2s; }
+.themeToggle:hover { background:#ffd7be; transform:translateY(-2px); }
+.themeIcon { font:700 19px/1 Georgia,serif; }
+html[data-theme="dark"] { color-scheme:dark; --ink:#f8eddf; --paper:#201b29; --line:rgba(255,228,207,.18); --muted:#c4b2b9; --plum:#754b65; }
+html[data-theme="dark"] body,html[data-theme="dark"] .homePage,html[data-theme="dark"] .dashboardPage { color:var(--ink); background:#201b29; }
+html[data-theme="dark"] .eyebrow { color:#ffb98f; }
+html[data-theme="dark"] .brand span { color:#ff966b; }
+html[data-theme="dark"] .announcement { background:#412a42; }
+html[data-theme="dark"] .homePage .nav { border-color:#6c4b55; }
+html[data-theme="dark"] .homePage .navLinks,html[data-theme="dark"] .roleSwitch { background:#3a2b3c; border-color:#70515a; }
+html[data-theme="dark"] .homePage .navLinks a,html[data-theme="dark"] .roleSwitch a { color:#f5e9de; }
+html[data-theme="dark"] .homePage .navLinks a:hover { color:#281a29!important; }
+html[data-theme="dark"] .themeToggle { color:#ffe6cd; background:#49324a; border-color:#9d6f71; }
+html[data-theme="dark"] .themeToggle:hover { background:#68435b; }
+html[data-theme="dark"] .wallet:not(.walletConnected),html[data-theme="dark"] .primary:not(.joinBand .primary) { color:#271a2b; background:linear-gradient(120deg,#ffb073,#ff8180); box-shadow:0 6px 0 #8d4d59; }
+html[data-theme="dark"] .walletConnected { background:#654960; color:#fff4e7; }
+html[data-theme="dark"] .walletMenu { color:#fff1e7; background:#3a2d3d; border-color:#7b5362; }
+html[data-theme="dark"] .walletMenu>a,html[data-theme="dark"] .walletMenu>button { color:#fff1e7; }
+html[data-theme="dark"] .walletMenu>a:hover,html[data-theme="dark"] .walletMenu>button:hover { background:#554057; }
+html[data-theme="dark"] .walletMenu span>small { color:#dcc8cc; }
+html[data-theme="dark"] .walletError { color:#ffccbc; background:#55313f; border-color:#9b6063; }
+html[data-theme="dark"] .homePage .lead,html[data-theme="dark"] .heroProof,html[data-theme="dark"] .sectionTitle>div>p:last-child,html[data-theme="dark"] .howIntro>p:last-child { color:#c6b6b8; }
+html[data-theme="dark"] .heroTextLink { border-color:#f8eddf; }
+html[data-theme="dark"] .heroArt { background:radial-gradient(circle at 54% 48%,#8d5660 0 22%,transparent 23%),radial-gradient(circle at 83% 19%,#f19a78 0 4%,transparent 5%),#5f3d55; }
+html[data-theme="dark"] .heroArtLabel,html[data-theme="dark"] .artCounter { color:#ffe9cf; }
+html[data-theme="dark"] .floatNote { color:#2b2030; background:#ffe2c9; }
+html[data-theme="dark"] .ticker { color:#271b2a; background:#ff9d68; border-color:#c56e67; }
+html[data-theme="dark"] .campaignSection { background:#2b2332; }
+html[data-theme="dark"] .campaignCard,html[data-theme="dark"] .marketCard,html[data-theme="dark"] .campaignForm,html[data-theme="dark"] .merchantCampaigns,html[data-theme="dark"] .voucherRow,html[data-theme="dark"] .metricGrid>div,html[data-theme="dark"] .managementCard,html[data-theme="dark"] .detailInfoGrid article,html[data-theme="dark"] .cameraCard,html[data-theme="dark"] .scannerAside,html[data-theme="dark"] .applicationList article,html[data-theme="dark"] .voucherPass,html[data-theme="dark"] .pageState { color:#f9eee1; background:#342b3d; border-color:#62485a; }
+html[data-theme="dark"] .cardCopy>p,html[data-theme="dark"] .marketCopy>p:first-child { color:#ffa986; }
+html[data-theme="dark"] .cardCopy>div,html[data-theme="dark"] .marketCopy .description,html[data-theme="dark"] .stockLine,html[data-theme="dark"] .voucherRow p,html[data-theme="dark"] .manageRow p,html[data-theme="dark"] .campaignDetailCopy .detailLead,html[data-theme="dark"] .voucherAside>p:not(.eyebrow) { color:#c7b7bc; }
+html[data-theme="dark"] .filter,html[data-theme="dark"] .secondaryButton { color:#fff1e7; background:#47344c; border-color:#8f6270; }
+html[data-theme="dark"] .filter:hover,html[data-theme="dark"] .secondaryButton:hover { background:#67465e; }
+html[data-theme="dark"] .how .steps>div { color:#fff1e8; background:#3c3045; border-color:#694c5f; }
+html[data-theme="dark"] .steps p { color:#c8b8be; }
+html[data-theme="dark"] .joinBand { background:#392840; }
+html[data-theme="dark"] .homeFooter { color:#bcacb4; }
+html[data-theme="dark"] .dashboardHeader { background:rgba(32,27,41,.94); border-color:#62485a; }
+html[data-theme="dark"] .roleSwitch a.active { background:#ef8d74; color:#291b2b; }
+html[data-theme="dark"] .dashboardHero>div>p:last-child,html[data-theme="dark"] .formHeading>p:last-child,html[data-theme="dark"] .contentHeading>span { color:#c9b9bd; }
+html[data-theme="dark"] .balanceCard,html[data-theme="dark"] .verificationCard { color:#fff3e8; background:#724761; box-shadow:12px 13px 0 #473246; }
+html[data-theme="dark"] .balanceCard span,html[data-theme="dark"] .verificationCard span,html[data-theme="dark"] .balanceCard small,html[data-theme="dark"] .verificationCard small { color:#f1c9bf; }
+html[data-theme="dark"] .contentHeading input,html[data-theme="dark"] .campaignForm input,html[data-theme="dark"] .campaignForm textarea,html[data-theme="dark"] .campaignForm select,html[data-theme="dark"] .onboardingCard input,html[data-theme="dark"] .onboardingCard textarea,html[data-theme="dark"] .manualCodeForm input { color:#fff0e7; background:#2c2434; border-color:#6d5264; }
+html[data-theme="dark"] input::placeholder,html[data-theme="dark"] textarea::placeholder { color:#baa5ae; }
+html[data-theme="dark"] .campaignForm label,html[data-theme="dark"] .manualCodeForm label { color:#e4d1d2; }
+html[data-theme="dark"] .stockLine,html[data-theme="dark"] .pricePanel,html[data-theme="dark"] .detailInfoGrid dl>div,html[data-theme="dark"] .voucherAside dl>div { border-color:#62485a; }
+html[data-theme="dark"] .emptyState { color:#d4c4c7; background:#342a3c; border-color:#705363; }
+html[data-theme="dark"] .voucherCode,html[data-theme="dark"] .feePreview,html[data-theme="dark"] .shareUrl { color:#f8ede2; background:#49364b; }
+html[data-theme="dark"] .feePreview small,html[data-theme="dark"] .voucherCode small { color:#d1bcc4; }
+html[data-theme="dark"] .manageRow { border-color:#6b5061; }
+html[data-theme="dark"] .onboardingCard { background:#3e2c45; }
+html[data-theme="dark"] .onboardingCard>div>p:last-child { color:#dac5cf; }
+html[data-theme="dark"] .notice,html[data-theme="dark"] .approvalState,html[data-theme="dark"] .transactionFeedback { color:#f8ece0; background:#55405b; border-color:#8f6872; }
+html[data-theme="dark"] .statusPill,html[data-theme="dark"] .statusBadge.success { color:#ffe4c7; background:#68503f; }
+html[data-theme="dark"] .voucherPassCode,html[data-theme="dark"] .adminMetric,html[data-theme="dark"] .demoBanner { background:#543b57; }
+html[data-theme="dark"] .perforation:before,html[data-theme="dark"] .perforation:after { background:#201b29; }
+html[data-theme="dark"] .shareDialog { color:#fff1e7; background:#352a3e; }
+html[data-theme="dark"] .shareDialog>p:not(.eyebrow),html[data-theme="dark"] .shareUrl span { color:#c9b9bf; }
+html[data-theme="dark"] .campaignDetailVisual { color:#2c1e2e; }
+html[data-theme="dark"] .breadcrumb,html[data-theme="dark"] .breadcrumb a,html[data-theme="dark"] .textLink { color:#ffae87; }
+@media(max-width:1050px){.homePage .nav{gap:12px}.homePage .navLinks a{padding:9px 10px;font-size:11px}.navActions{gap:7px}.navActions .wallet{padding:12px 15px;font-size:11px}}
+@media(max-width:800px){.homePage .navLinks{display:none}.homePage .nav{justify-content:space-between}.themeToggle{min-width:42px}.themeLabel{display:none}}
+@media(max-width:620px){.dashboardActions{gap:7px}.dashboardActions .wallet{padding:11px 12px;font-size:11px}.homePage .navActions .wallet{padding:11px 12px}.homePage .hero h1{font-size:clamp(46px,10vw,62px)}}

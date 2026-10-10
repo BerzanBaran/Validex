@@ -6,7 +6,8 @@ import { voucherAction } from "./voucherPolicy";
 const active: Voucher = {
   id: "voucher", campaignId: "campaign", ownerWallet: "buyer", merchant: "Cafe",
   title: "Coffee", priceUsdc: 5, purchasedAt: "", expiresAt: "2027-01-01T00:00:00Z",
-  code: "VLDX", status: "active", chainVoucher: "voucher-pda", campaignCancelled: false,
+  code: "VLDX", secretBase64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  status: "active", chainVoucher: "voucher-pda", campaignCancelled: false,
 };
 
 describe("voucher refund policy", () => {

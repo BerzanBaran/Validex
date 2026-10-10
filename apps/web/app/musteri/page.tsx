@@ -21,7 +21,7 @@ export default function CustomerDashboard() {
   }, [walletAddress, marketplace.syncMyVouchers, marketplace.clearVouchers]);
 
   const campaigns = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("tr-TR");
+    const normalized = query.trim().toLocaleLowerCase("en-US");
     return marketplace.campaigns.filter(
       (campaign) =>
         campaign.status === "published" &&
@@ -29,7 +29,7 @@ export default function CustomerDashboard() {
         new Date(campaign.expiresAt).getTime() > Date.now() &&
         (!normalized ||
           `${campaign.title} ${campaign.merchant} ${campaign.area}`
-            .toLocaleLowerCase("tr-TR")
+            .toLocaleLowerCase("en-US")
             .includes(normalized)),
     );
   }, [marketplace.campaigns, query]);
@@ -43,24 +43,24 @@ export default function CustomerDashboard() {
       <DashboardHeader role="customer" onAddressChange={setWalletAddress} />
       <section className="dashboardShell dashboardHero">
         <div>
-          <p className="eyebrow"><span className="sparkle">✳</span> KEŞİF ALANI / MÜŞTERİ</p>
-          <h1>İyi bir gün,<br /><em>yakınında başlar.</em></h1>
-          <p>Mahallendeki güzel fırsatları keşfet. Beğendiğin kuponu cüzdanınla al; QR kodun hep yanında olsun.</p>
+          <p className="eyebrow"><span className="sparkle">✳</span> DISCOVERY SPACE / CUSTOMER</p>
+          <h1>A good day<br /><em>starts nearby.</em></h1>
+          <p>Discover great offers in your neighborhood. Buy your favorite with your wallet and keep its QR code close.</p>
         </div>
         <div className="balanceCard">
-          <span>DEVNET CÜZDAN BAKİYESİ</span>
-          <strong>{!walletAddress ? "Cüzdan bağlı değil" : balances.status === "loading" ? "Okunuyor…" : balances.usdcBalance === null ? "USDC mint bekleniyor" : `${balances.usdcBalance.toFixed(2)} USDC`}</strong>
-          <small>{balances.status === "error" ? "Solana RPC bağlantısı kurulamadı." : walletAddress && balances.solBalance !== null ? `${balances.solBalance.toFixed(4)} SOL · ${balances.network}` : balances.network}</small>
+          <span>DEVNET WALLET BALANCE</span>
+          <strong>{!walletAddress ? "Wallet not connected" : balances.status === "loading" ? "Loading…" : balances.usdcBalance === null ? "USDC mint not configured" : `${balances.usdcBalance.toFixed(2)} USDC`}</strong>
+          <small>{balances.status === "error" ? "Could not connect to Solana RPC." : walletAddress && balances.solBalance !== null ? `${balances.solBalance.toFixed(4)} SOL · ${balances.network}` : balances.network}</small>
         </div>
       </section>
 
       <section className="dashboardShell dashboardContent">
         <div className="contentHeading">
-          <div><p className="eyebrow">BU HAFTANIN KEŞİFLERİ</p><h2>Birini seç, keyfine bak.</h2></div>
+          <div><p className="eyebrow">THIS WEEK'S FINDS</p><h2>Pick one. Enjoy more.</h2></div>
           <input
-            aria-label="Kampanyalarda ara"
+            aria-label="Search offers"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="İşletme, semt veya kampanya ara"
+            placeholder="Search business, area, or offer"
             type="search"
             value={query}
           />
@@ -77,38 +77,38 @@ export default function CustomerDashboard() {
                 <p>{campaign.merchant} · {campaign.category}</p>
                 <h3>{campaign.title}</h3>
                 <p className="description">{campaign.description}</p>
-                <div className="stockLine"><span>{campaign.originalValueUsdc} USDC değerinde</span><span>{campaign.stock - campaign.sold} kaldı</span></div>
-                <div className="cardActions"><Link className="secondaryButton" href={`/kampanyalar/${campaign.id}`}>Detaylar</Link><Link className="actionButton" href={`/kampanyalar/${campaign.id}`}>Satın al</Link></div>
+                <div className="stockLine"><span>Worth {campaign.originalValueUsdc} USDC</span><span>{campaign.stock - campaign.sold} left</span></div>
+                <div className="cardActions"><Link className="secondaryButton" href={`/kampanyalar/${campaign.id}`}>Details</Link><Link className="actionButton" href={`/kampanyalar/${campaign.id}`}>Buy voucher</Link></div>
               </div>
             </article>
           ))}
         </div>
-        {marketplace.campaignError ? <div className="emptyState" role="alert">Kampanyalar API'den yüklenemedi: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Tekrar dene</button></div> : !campaigns.length ? <div className="emptyState">Aramanıza uygun aktif kampanya bulunamadı.</div> : null}
+        {marketplace.campaignError ? <div className="emptyState" role="alert">Offers could not be loaded: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Try again</button></div> : !marketplace.ready ? <div className="emptyState loadingState" aria-live="polite">Loading nearby offers…</div> : !campaigns.length ? <div className="emptyState">No active offers match your search.</div> : null}
       </section>
 
       <section className="dashboardShell vouchersSection">
-        <div className="contentHeading"><div><p className="eyebrow">CEBİNDEKİ GÜZEL PLANLAR</p><h2>Kuponlarım <span className="headingSpark">✳</span></h2></div><span>{myVouchers.filter((voucher) => voucherAction(voucher) === "redeem").length} kullanılabilir kupon</span></div>
+        <div className="contentHeading"><div><p className="eyebrow">GOOD PLANS IN YOUR POCKET</p><h2>My vouchers <span className="headingSpark">✳</span></h2></div><span>{myVouchers.filter((voucher) => voucherAction(voucher) === "redeem").length} ready to redeem</span></div>
         {!walletAddress ? (
-          <div className="emptyState">Kuponlarınızı görmek için Solflare veya Phantom cüzdanınızı bağlayın.</div>
+          <div className="emptyState">Connect your Solflare or Phantom wallet to see your vouchers.</div>
         ) : marketplace.vouchersLoading ? (
-          <div className="emptyState">Kuponlar PostgreSQL'den yükleniyor…</div>
+          <div className="emptyState">Loading your vouchers…</div>
         ) : marketplace.voucherError ? (
-          <div className="emptyState" role="alert">{marketplace.voucherError} <button className="secondaryButton" onClick={() => void marketplace.syncMyVouchers(walletAddress).catch(() => {})} type="button">Tekrar dene</button></div>
+          <div className="emptyState" role="alert">{marketplace.voucherError} <button className="secondaryButton" onClick={() => void marketplace.syncMyVouchers(walletAddress).catch(() => {})} type="button">Try again</button></div>
         ) : myVouchers.length ? (
           <div className="voucherList">
             {myVouchers.map((voucher) => (
               <Link className="voucherRow" href={`/musteri/kuponlar/${voucher.id}`} key={voucher.id}>
-                <div><span className="statusPill">{voucher.status === "pending" ? "ZİNCİR KONTROLÜ" : voucher.status === "redeemed" ? "KULLANILDI" : voucher.status === "refunded" ? "İADE" : voucherAction(voucher) === "refund" ? "İADE HAKKI" : voucherAction(voucher) === "redeem" ? "AKTİF" : "KAPALI"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Son kullanım {voucher.expiresAt}</p></div>
-                <div className="voucherCode"><small>KUPON REFERANSI</small><strong>{voucher.code}</strong></div>
+                <div><span className="statusPill">{voucher.status === "pending" ? "VERIFYING ON-CHAIN" : voucher.status === "redeemed" ? "REDEEMED" : voucher.status === "refunded" ? "REFUNDED" : voucherAction(voucher) === "refund" ? "REFUND AVAILABLE" : voucherAction(voucher) === "redeem" ? "ACTIVE" : "CLOSED"}</span><h3>{voucher.title}</h3><p>{voucher.merchant} · Expires {voucher.expiresAt}</p></div>
+                <div className="voucherCode"><small>VOUCHER REFERENCE</small><strong>{voucher.code}</strong></div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="emptyState">Henüz bir kupon satın almadınız.</div>
+          <div className="emptyState">You haven't bought a voucher yet.</div>
         )}
       </section>
 
-      <div className="demoBanner">{chainConfigured() ? "USDC ödemeleri yalnızca zincire bağlı kampanyalarda cüzdan imzası ve zincir onayıyla yapılır." : "Ödeme modu kapalı: program ve USDC mint adresleri ayarlanana kadar USDC tahsil edilmez."}</div>
+      <div className="demoBanner">{chainConfigured() ? "USDC payments require your wallet signature and on-chain confirmation." : "Payments are disabled until the program and USDC mint are configured."}</div>
     </main>
   );
 }

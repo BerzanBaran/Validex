@@ -56,7 +56,7 @@ def merchant(owner: User) -> Merchant:
         wallet_address=owner.wallet_address,
         business_name="Validex Cafe",
         description="Local test merchant",
-        address="Kadıköy, İstanbul",
+        address="Brooklyn, New York",
         verification_status=VerificationStatus.PENDING,
     )
 
@@ -67,7 +67,7 @@ def test_customer_can_submit_one_merchant_application() -> None:
     payload = MerchantCreate(
         business_name="Validex Cafe",
         description="Local test merchant",
-        address="Kadıköy, İstanbul",
+        address="Brooklyn, New York",
     )
 
     created = asyncio.run(apply_as_merchant(payload, session, applicant))
@@ -86,7 +86,7 @@ def test_duplicate_merchant_application_is_rejected() -> None:
     with pytest.raises(HTTPException) as error:
         asyncio.run(
             apply_as_merchant(
-                MerchantCreate(business_name="Again", address="Kadıköy, İstanbul"),
+                MerchantCreate(business_name="Again", address="Brooklyn, New York"),
                 session,
                 applicant,
             )

@@ -13,7 +13,7 @@ def test_voucher_response_contains_database_campaign_details() -> None:
     campaign = Campaign(
         id=uuid.uuid4(),
         merchant_id=merchant.id,
-        title="İki kahve",
+        title="Two coffees",
         price_minor=5_000_000,
         status=CampaignStatus.CANCELLED,
     )
@@ -31,7 +31,7 @@ def test_voucher_response_contains_database_campaign_details() -> None:
 
     assert response.status == VoucherStatus.PENDING_CHAIN
     assert response.onchain_address is None
-    assert response.campaign_title == "İki kahve"
+    assert response.campaign_title == "Two coffees"
     assert response.merchant_name == "Validex Cafe"
     assert response.price_minor == 5_000_000
     assert response.purchased_at is None

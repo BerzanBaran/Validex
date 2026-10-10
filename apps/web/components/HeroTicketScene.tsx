@@ -70,10 +70,10 @@ export function HeroTicketScene() {
       ctx.font = "bold 32px Arial";
       ctx.fillText("validex.", 60, 93);
       ctx.font = "bold 24px Arial";
-      ctx.fillText("YERELİN İYİ HALİ", 60, 540);
+      ctx.fillText("GOOD THINGS, LOCALLY", 60, 540);
       ctx.font = "bold 110px Arial";
-      ctx.fillText("GÜZEL", 52, 652);
-      ctx.fillText("ANLAR", 52, 765);
+      ctx.fillText("BETTER", 52, 652);
+      ctx.fillText("MOMENTS", 52, 765);
       ctx.fillStyle = "#f36f4c";
       ctx.fillRect(0, 822, 700, 148);
       ctx.fillStyle = "#472a3b";
@@ -156,5 +156,5 @@ export function HeroTicketScene() {
     return () => { disposed = true; cleanup(); };
   }, []);
 
-  return <div className={`hero3d ${ready ? "isReady" : ""}`} ref={hostRef} aria-hidden="true"><div className="hero3dFallback"><span>validex.</span><strong>GÜZEL<br />ANLAR</strong><small>01 / 03 ↗</small></div></div>;
+  return <div className={`hero3d ${ready ? "isReady" : ""}`} ref={hostRef} aria-hidden="true"><div className="hero3dFallback"><span>validex.</span><strong>BETTER<br />MOMENTS</strong><small>01 / 03 ↗</small></div></div>;
 }

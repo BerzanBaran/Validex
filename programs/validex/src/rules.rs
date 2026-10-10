@@ -20,8 +20,16 @@ pub fn assert_redemption_authorities(
     merchant: Pubkey,
 ) -> Result<()> {
     require_keys_eq!(voucher.buyer, buyer, ValidexError::UnauthorizedRedemption);
-    require_keys_eq!(campaign.authority, merchant, ValidexError::UnauthorizedRedemption);
-    require_keys_eq!(voucher.campaign, campaign_address, ValidexError::UnauthorizedRedemption);
+    require_keys_eq!(
+        campaign.authority,
+        merchant,
+        ValidexError::UnauthorizedRedemption
+    );
+    require_keys_eq!(
+        voucher.campaign,
+        campaign_address,
+        ValidexError::UnauthorizedRedemption
+    );
     Ok(())
 }
 
@@ -124,17 +132,37 @@ mod tests {
         let campaign_address = Pubkey::new_unique();
         voucher.campaign = campaign_address;
         assert!(assert_redemption_authorities(
-            &campaign, &voucher, campaign_address, voucher.buyer, campaign.authority
-        ).is_ok());
+            &campaign,
+            &voucher,
+            campaign_address,
+            voucher.buyer,
+            campaign.authority
+        )
+        .is_ok());
         assert!(assert_redemption_authorities(
-            &campaign, &voucher, campaign_address, Pubkey::new_unique(), campaign.authority
-        ).is_err());
+            &campaign,
+            &voucher,
+            campaign_address,
+            Pubkey::new_unique(),
+            campaign.authority
+        )
+        .is_err());
         assert!(assert_redemption_authorities(
-            &campaign, &voucher, campaign_address, voucher.buyer, Pubkey::new_unique()
-        ).is_err());
+            &campaign,
+            &voucher,
+            campaign_address,
+            voucher.buyer,
+            Pubkey::new_unique()
+        )
+        .is_err());
         assert!(assert_redemption_authorities(
-            &campaign, &voucher, Pubkey::new_unique(), voucher.buyer, campaign.authority
-        ).is_err());
+            &campaign,
+            &voucher,
+            Pubkey::new_unique(),
+            voucher.buyer,
+            campaign.authority
+        )
+        .is_err());
     }
 
     #[test]

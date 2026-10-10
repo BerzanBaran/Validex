@@ -51,9 +51,9 @@ function preferredWallet(): WalletKind {
 export async function signSolanaTransaction(transaction: Transaction, expectedAddress: string): Promise<Transaction> {
   const provider = providerFor(preferredWallet());
   if (!provider?.publicKey || provider.publicKey.toString() !== expectedAddress) {
-    throw new Error("İşlem için doğru Solflare/Phantom cüzdanını bağlayın.");
+    throw new Error("Connect the correct Solflare or Phantom wallet for this transaction.");
   }
-  if (!provider.signTransaction) throw new Error("Bu cüzdan işlem imzalamayı desteklemiyor.");
+  if (!provider.signTransaction) throw new Error("This wallet does not support transaction signing.");
   return provider.signTransaction(transaction);
 }
 
@@ -83,7 +83,7 @@ export function useSolanaWallet() {
   const connect = useCallback(async (walletKind: WalletKind = kind): Promise<string | null> => {
     const provider = providerFor(walletKind);
     if (!provider) {
-      setError(`${walletKind === "solflare" ? "Solflare" : "Phantom"} bulunamadı. Cüzdan eklentisini kurup sayfayı yenileyin.`);
+      setError(`${walletKind === "solflare" ? "Solflare" : "Phantom"} was not found. Install the wallet extension and refresh the page.`);
       return null;
     }
     try {
@@ -91,14 +91,14 @@ export function useSolanaWallet() {
       setError(null);
       const response = await provider.connect();
       const publicKey = response?.publicKey ?? provider.publicKey;
-      if (!publicKey) throw new Error("Cüzdan adresi okunamadı.");
+      if (!publicKey) throw new Error("Could not read the wallet address.");
       const connectedAddress = publicKey.toString();
       window.localStorage.setItem(PREFERRED_WALLET_KEY, walletKind);
       setKind(walletKind);
       setAddress(connectedAddress);
       return connectedAddress;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Cüzdan bağlantısı reddedildi.");
+      setError(caught instanceof Error ? caught.message : "Wallet connection was declined.");
       return null;
     } finally {
       setConnecting(false);
@@ -107,7 +107,7 @@ export function useSolanaWallet() {
 
   const signMessage = useCallback(async (message: string): Promise<string> => {
     const provider = providerFor(preferredWallet());
-    if (!provider) throw new Error("Seçili Solana cüzdanı bulunamadı.");
+    if (!provider) throw new Error("Selected Solana wallet was not found.");
     const response = await provider.signMessage(new TextEncoder().encode(message), "utf8");
     let binary = "";
     for (const byte of response.signature) binary += String.fromCharCode(byte);

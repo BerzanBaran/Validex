@@ -1,102 +1,102 @@
-# Validex — Colosseum teslim paketi (taslak)
+# Validex — Colosseum submission pack (draft)
 
-Bu belge bir **hazırlık paketidir**, tamamlanmış zincir dağıtımı veya çekilmiş video kanıtı değildir. `docs/roadmap.md` eski durum işaretleri yerine aşağıdaki doğrulama listesini kullanın. Colosseum'un güncel başvuru ekranındaki zorunlu alanları teslim günü tekrar kontrol edin.
+This is a **preparation pack** with a verified Devnet program deployment, not proof of a completed wallet-to-wallet purchase or recorded video. Check the current Colosseum submission portal again before submitting.
 
-## Durum ve dürüst demo sınırı
+## Honest delivery status
 
-| İş | Mevcut durum | Tamamlanma kanıtı |
+| Item | Status | Completion evidence |
 | --- | --- | --- |
-| Anchor saf kural birim testleri | Kaynak kodda; çalıştırılmayı bekliyor | `cargo test -p validex --lib` çıktısı |
-| Hatalı mint / yetkisiz kullanım / tekrar kullanım | Kural testleri var; gerçek hesap kısıtları yerel validator'da ayrıca sınanmalı | Başarısız işlemler, değişmeyen escrow ve voucher hesabı |
-| Solflare satın alma E2E | Bloke: dağıtılmış program, mint, cüzdan ve test bakiyesi yok | İşlem imzası, `finalized` kaydı, API'de `active` kupon |
-| Solana Devnet deployment | Bloke: CLI, yönetici public key'i, program keypair ve mint yok | Devnet `solana program show`, program ID, platform PDA |
-| Demo verisi | `docs/demo-campaigns.json`; güvenli draft seed aracı | Yerel DB'de taslaklar; gerçek yayın zincir işlemiyle |
-| Pitch / ürün demo videosu | Aşağıda senaryo hazır; kayıt ve yayın yapılmadı | İki ayrı video bağlantısı |
+| Anchor domain-rule unit tests | 9 passed | `cargo test -p validex --lib` output |
+| Local validator transactions | Passed: wrong mint/escrow, unauthorized actions, replay, insufficient USDC, 2% fee, refund | `node apps/web/tests/validex-localnet.mjs` output |
+| Solflare purchase E2E | Pending platform initialization, merchant/customer accounts, and test USDC | Signature, `finalized` proof, active voucher in API |
+| Solana Devnet deployment | Program deployed; platform initialization pending | [Devnet program](https://explorer.solana.com/address/5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh?cluster=devnet), [deployment transaction](https://explorer.solana.com/tx/aD2TYH9rNgMAtpgpsUti4ToVvyCmrczsNVc4Gvmy2yF7nLdwnNpXwU2nxcNYGNcoP3DD1iXpbM4tffipGFrWyCB?cluster=devnet) |
+| Demo data | Three templates and safe draft seed tool | Local draft records; real publishing requires an on-chain transaction |
+| Pitch and product-demo videos | Storyboards below; not recorded or uploaded | Two video links |
 
-Gerçek işlem yapılmamışken demo verilerini `published`, `active` veya `redeemed` göstermeyin. Solflare imza onayı **kullanıcının kendi cüzdanında** yapılır; seed phrase/private key kayda veya repoya girmez.
+Never show a campaign as `published` or a voucher as `active` or `redeemed` without a real transaction. The user approves Solflare prompts in their own wallet. Do not record or commit private keys, seed phrases, or access tokens.
 
-## Mimari şema
+## Architecture diagram
 
 ```mermaid
 flowchart LR
-  M["İşletme sahibi<br/>Solflare"] --> W["Next.js<br/>Validex web"]
-  C["Müşteri<br/>Solflare"] --> W
-  S["Çalışan<br/>QR doğrulama"] --> W
-  W -->|imzalı oturum / intent / QR| A[FastAPI]
-  A -->|kampanya / şifreli kupon sırrı / denetim| D[(PostgreSQL)]
-  W -->|cüzdan imzalı işlemler| R[Solana Devnet RPC]
-  A -->|finalized işlem ve hesap doğrulama| R
-  R --> P[Validex Anchor programı]
+  M["Merchant owner<br/>Solflare"] --> W["Next.js<br/>Validex web"]
+  C["Customer<br/>Solflare"] --> W
+  S["Staff<br/>QR verification"] --> W
+  W -->|signed login / intent / QR| A[FastAPI]
+  A -->|offers / encrypted voucher secret / audit| D[(PostgreSQL)]
+  W -->|wallet-signed transactions| R[Solana Devnet RPC]
+  A -->|finalized transaction and account checks| R
+  R --> P[Validex Anchor program]
   P --> E["Campaign PDA<br/>USDC escrow ATA"]
-  P --> V["Voucher PDA<br/>tek kullanım durumu"]
-  P --> T[Treasury %2 / işletme %98]
+  P --> V["Voucher PDA<br/>single-use status"]
+  P --> T[Treasury 2% / merchant 98%]
 ```
 
-Ödeme akışı: API `purchase-intent` ile 256-bit sır üretir → müşteri Solflare'de `purchase_voucher` imzalar → program tam USDC tutarını escrow'a taşır → API yalnızca beklenen program, mint, hesap, miktar ve `finalized` imza eşleşirse kuponu etkinleştirir. Kullanımda müşteri **ve** işletme imzası gerekir. İptal veya süre sonrasında kullanılmamış kupon için iade talebini kupon sahibi imzalar.
+Purchase: the API creates a 256-bit secret with only its hash sent to `purchase_voucher`; the customer signs in Solflare; the program moves the exact USDC price to escrow; the API activates the voucher only after verifying a finalized transaction with matching program, mint, accounts, amount, and hash. Redemption requires **both** customer and merchant signatures. After cancellation or expiry, the owner of an unused voucher signs their own refund request.
 
-## Demo seed verileri
+## Demo seed data
 
-`docs/demo-campaigns.json` üç örnek kampanya metni ve en küçük USDC birimindeki fiyatları içerir. Aracın varsayılanı yalnızca önizlemedir:
+`docs/demo-campaigns.json` contains three sample offer descriptions and prices in USDC minor units. The script previews data by default:
 
 ```powershell
 cd services/api
 ..\..\.venv\Scripts\python.exe scripts/seed_demo.py
 ```
 
-Mevcut, doğrulanmış bir demo işletme cüzdanı ve yalnızca yerel **development** veritabanı hazırsa taslakları idempotent biçimde ekleyin:
+If a verified demo merchant already exists and the database is strictly local **development**, insert idempotent drafts:
 
 ```powershell
-..\..\.venv\Scripts\python.exe scripts/seed_demo.py --apply --merchant-wallet <ISLETME_PUBLIC_KEY>
+..\..\.venv\Scripts\python.exe scripts/seed_demo.py --apply --merchant-wallet <MERCHANT_PUBLIC_KEY>
 ```
 
-Bu işlem zincir adresi veya imza uydurmaz; taslaklar müşteri vitrininde satılabilir görünmez. Devnet kurulunca işletme, aynı içerikleri `/isletme` formundan kendi cüzdanıyla zincirde yayımlar. Bir fixture'ı gerçek kupon veya escrow ödemesi gibi sunmayın.
+The script fabricates no on-chain address or signature. Drafts are not purchasable in the customer marketplace. Once devnet is ready, the merchant publishes the same content from `/isletme` with their wallet.
 
-## Yerel test ve devnet devreye alma sırası
+## Test and devnet release sequence
 
-1. `cargo fmt --all -- --check`, `cargo test -p validex --lib`, `anchor build`, `anchor test` çalıştırın. Son iki komut yerel Solana validator ve uygun Anchor/Solana araç zincirini gerektirir. `anchor test` geçmeden devnet'e çıkmayın.
-2. Yerel validator'da farklı mint, alıcı/işletme imzası eksikliği, ikinci kullanım, iki kez iade, yanlış escrow ATA, stok limiti ve transfer başarısızlığı senaryolarında işlemlerin atomik biçimde reddedildiğini doğrulayın. Kural testi hesap kısıtlarının yerine geçmez.
-3. Yönetici, işletme ve müşteri için **yalnızca public key** adreslerini belirleyin. Program ID üretecek keypair yerel ve gizli kalmalı; repo içine konmamalı. Yönetici cüzdanında devnet SOL, müşteri cüzdanında test USDC ve işlem ücretleri için SOL bulunsun.
-4. `VALIDEX_ADMIN_WALLET` değişkenini **Anchor derleme işleminin ortamına** aktarın. Bu adres programa derleme sırasında sabitlenir; sadece `.env` yazmak yeterli değildir. `anchor keys sync` sonrası `declare_id!`, `Anchor.toml` ve üretilen keypair aynı program ID olmalıdır. `anchor build` ile yeniden derleyin.
-5. Solana CLI'da `solana config get` ile kümeyi kontrol edin. Devnet için `anchor deploy --provider.cluster devnet` kullanın; komut öncesi program ID, yükseltme yetkilisi ve kullanılacak cüzdanı tekrar doğrulayın. Sonrasında `solana program show <PROGRAM_ID> --url devnet` ile zincirdeki programı doğrulayın. [Anchor yerel test/deploy kılavuzu](https://www.anchor-lang.com/docs/quickstart/local), [Solana dağıtım kılavuzu](https://solana.com/docs/programs/deploying).
-6. Platformu yalnızca sabit yönetici cüzdanıyla seçilen **6 decimal devnet mint** için başlatın. API `VALIDEX_SOLANA_PROGRAM_ID`, `VALIDEX_USDC_MINT`, web `NEXT_PUBLIC_VALIDEX_PROGRAM_ID`, `NEXT_PUBLIC_USDC_MINT` aynı gerçek adresleri kullanmalı. RPC URL'leri devnet olmalı. Treasury ATA'yı doğrulayın.
-7. Yönetici zincirde işletmeyi kaydeder; işletme kampanyayı yayımlar. Müşteri Solflare ile satın alır; explorer'da `finalized` imza ve escrow artışı, API'de aktif kupon görülür. Aynı kupon tekrar kullanılmamalı. Kullanım ve iade için ayrı test kuponları kullanın.
+1. Run `cargo fmt --all -- --check`, `cargo test -p validex --lib`, `anchor build --arch v2`, and the local-validator transaction test. The current Devnet cluster rejected the sBPFv3 build, so the deployed build uses sBPFv2.
+2. On the validator, test a different mint, missing customer or merchant signature, second redemption, second refund, wrong escrow ATA, inventory limits, and transfer failure. Confirm that each rejected transaction leaves voucher and escrow state unchanged. Domain-rule tests do not prove Anchor account constraints.
+3. Identify the admin, merchant, and customer **public keys**. Keep the program ID keypair local and private, outside the repository. Fund the admin with devnet SOL; the customer needs test USDC and SOL for fees.
+4. Export `VALIDEX_ADMIN_WALLET` into the **Anchor build process**. The address is compiled into the program; an `.env` file alone is insufficient. After `anchor keys sync`, the keypair, `declare_id!`, and `Anchor.toml` must have the same program ID. Rebuild with `anchor build`.
+5. Check `solana config get` for the intended cluster. Deploy only after checking the program ID, upgrade authority, and signing wallet. Verify with `solana program show <PROGRAM_ID> --url devnet`. The current program's upgrade authority is `Cwd8Y3CtzztBcY5dwhLgqBMywtJuKW86KdqqLGwH2Zc8`, not the temporary deployment account. See the [Solana deployment guide](https://solana.com/docs/programs/deploying).
+6. Initialize the platform with the pinned admin and selected **six-decimal devnet mint**. API variables `VALIDEX_SOLANA_PROGRAM_ID` and `VALIDEX_USDC_MINT` must match web variables `NEXT_PUBLIC_VALIDEX_PROGRAM_ID` and `NEXT_PUBLIC_USDC_MINT`. Confirm both RPC URLs point to devnet and the treasury ATA is correct.
+7. The admin registers a merchant on-chain; the merchant publishes an offer; the customer buys with Solflare. Check the finalized explorer transaction, escrow increase, and active voucher in the API. Use separate vouchers for redemption and refund tests.
 
-### Solflare E2E kayıt kontrolü
+### Solflare E2E recording checklist
 
-- Tarayıcı devnet'te ve Solflare doğru müşteri cüzdanına bağlı. Kayıtta public key ve işlem imzası gösterilebilir; **özel anahtar, seed phrase, hassas oturum tokenı gösterilmez**.
-- Kampanya sayfası ve fiyatı → `purchase-intent` → Solflare imza penceresi → işlem imzası → `confirmed` → `finalized` → `Kuponlarım` aktif QR.
-- İşlem reddedilirse yeni kupon/ödeme otomatik oluşmamalı. Sayfa yenilenince pending kayıt zincirden kurtarılmalı.
-- İşletme QR doğrulamasından sonra iki cüzdan imzası ile tek kullanım; ikinci deneme başarısız. Escrow, merchant ve treasury token bakiyeleri kontrol edilir.
+- Confirm the browser is on devnet and Solflare connects the intended customer wallet. A public key and transaction signature may appear in the recording; a private key, seed phrase, or sensitive session token must not.
+- Record offer and price → `purchase-intent` → Solflare approval → transaction signature → `confirmed` → `finalized` → active QR under My Vouchers.
+- If a transaction fails, the app must not invent a successful voucher or resend a payment automatically. On refresh, recover pending records from the chain.
+- After merchant QR verification, show the two-wallet signature flow, a successful single redemption, and rejection of a second attempt. Check escrow, merchant, and treasury token balances.
 
-## Colosseum için İngilizce açıklama taslağı
+## English Colosseum description draft
 
 **Name:** Validex
 
 **One-liner:** A Solana-powered marketplace that helps independent neighborhood businesses sell verifiable, single-use offers paid in USDC.
 
-**Problem:** Local merchants need a simple way to reach nearby customers without handing coupon ownership and settlement to an opaque intermediary. Customers need confidence that a purchased offer exists, is still usable, and can be refunded under clear rules.
+**Problem:** Local merchants need a simple way to reach nearby customers without handing voucher ownership and settlement to an opaque intermediary. Customers need confidence that a purchased offer exists, is still usable, and follows clear refund rules.
 
-**Solution:** Merchants publish limited campaigns; customers buy vouchers with Solflare. USDC stays in a campaign escrow account until a customer and the merchant jointly approve redemption. An Anchor program enforces inventory, expiry, one-time use, refunds, and a 2% platform fee. A FastAPI service handles discovery, encrypted voucher secrets, QR checks, and finalized-transaction verification; it cannot move escrow funds on its own.
+**Solution:** Merchants publish limited offers; customers buy vouchers with Solflare. USDC stays in campaign escrow until the customer and merchant jointly approve redemption. An Anchor program enforces inventory, expiry, one-time use, refunds, and a 2% platform fee. FastAPI handles discovery, encrypted voucher secrets, QR checks, and finalized-transaction verification; it cannot move escrow funds itself.
 
-**Why Solana:** Low-cost transactions make small local offers practical. PDA-owned escrow and atomic token transfers make settlement and the customer refund path transparent.
+**Why Solana:** Low-cost transactions make small local offers practical. PDA-owned escrow and atomic token transfers make settlement and refunds transparent.
 
-**Current stage:** Working web/API prototype and Anchor contract; devnet deployment and real-wallet end-to-end proof **pending**. Replace this sentence only after recording the actual program ID and transaction links.
+**Current stage:** Working web/API prototype and Devnet-deployed Anchor contract (`5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh`). Platform initialization and real-wallet end-to-end purchase proof are still **pending**; do not claim completed live payments yet.
 
-**Go-to-market hypothesis (not validated traction):** Pilot with a small cluster of independent cafes/restaurants in one neighborhood, then expand through merchant referrals and local creator partnerships. Add actual interviews, pilot metrics, team background and location before submission; do not invent traction.
+**Go-to-market hypothesis (not validated traction):** Pilot with a few independent cafes and restaurants in one neighborhood, then expand through merchant referrals and local creator partnerships. Add actual interviews, pilot metrics, team background, and location before submission; do not invent traction.
 
 **Repository:** https://github.com/BerzanBaran/Validex
 
-## İki ayrı video için çekim planı
+## Two separate video outlines
 
-Colosseum'un güncel SSS'si 2–3 dakikalık **pitch** ve en çok 3 dakikalık **ürün demosu** istiyor; bunlar henüz üretilmedi. [Güncel hackathon SSS](https://colosseum.com/hackathon?year=fall2026).
+Colosseum's current FAQ asks for a **2–3 minute pitch** and a **product demo up to 3 minutes**. Neither has been recorded yet. See the [current hackathon FAQ](https://colosseum.com/hackathon?year=fall2026).
 
-| Süre | Pitch videosu | Ürün demo videosu |
+| Time | Pitch video | Product demo video |
 | --- | --- | --- |
-| 0:00–0:25 | Yerel işletmenin müşteri edinme sorunu | Validex ana sayfa ve müşteri vitrini |
-| 0:25–0:55 | Hedef kullanıcı ve çözüm | İşletme başvurusu / kampanya oluşturma |
-| 0:55–1:35 | Neden Solana, escrow ve ortak imza | Solflare satın alma ve finalized kupon (yalnızca gerçekten çalışıyorsa) |
-| 1:35–2:10 | İş modeli: kullanımda %2 komisyon | QR doğrulama, kullanım, ikinci kullanımın reddi |
-| 2:10–2:40 | Pilot planı ve gerçek kullanıcı geri bildirimi | İptal/iade ve mimari şema |
-| 2:40–3:00 | Takım ve net kapanış | Program ID / explorer / repo, doğrulanmamış adım varsa açık not |
+| 0:00–0:25 | Local customer-acquisition problem | Validex homepage and customer marketplace |
+| 0:25–0:55 | Users and solution | Merchant application and offer creation |
+| 0:55–1:35 | Why Solana, escrow, and joint signing | Solflare purchase and finalized voucher (only if working for real) |
+| 1:35–2:10 | Business model: 2% on redemption | QR check, redemption, second attempt rejected |
+| 2:10–2:40 | Pilot plan and real customer feedback | Cancellation/refund and architecture diagram |
+| 2:40–3:00 | Team and clear close | Program ID, explorer, repo, and any honest limitation |
 
-Videoların İngilizce anlatımı için yukarıdaki açıklamayı temel alın. Kayıt sırasında cüzdan onayını kullanıcı bizzat yapmalı. Pitch'te doğrulanmamış kullanım/gelir iddiaları yok; demo videosunda sahte zincir işlemi veya mock ödeme gerçek gibi gösterilmiyor. Başvuru portalına videoları ve takım bilgilerini kullanıcı yükleyecek.
+Use the English description above as the narrative starting point. The user must personally approve wallet prompts during recording. Do not present mocked transactions as real or claim unverified revenue. The user will upload the videos and team details to the submission portal.

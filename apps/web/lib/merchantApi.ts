@@ -37,16 +37,16 @@ export type AuditEvent = {
 
 function tokenFor(walletAddress: string): string {
   const session = getStoredSession(walletAddress);
-  if (!session) throw new Error("Cüzdan oturumu bulunamadı. Cüzdanı yeniden bağlayın.");
+  if (!session) throw new Error("Wallet session not found. Reconnect your wallet.");
   return session.accessToken;
 }
 
 async function readError(response: Response): Promise<string> {
   try {
     const body = await response.json() as { detail?: string };
-    return body.detail ?? "API işlemi tamamlanamadı.";
+    return body.detail ?? "The API action could not be completed.";
   } catch {
-    return "API işlemi tamamlanamadı.";
+    return "The API action could not be completed.";
   }
 }
 

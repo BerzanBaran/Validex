@@ -19,11 +19,11 @@ function toCampaign(item: ApiCampaign): Campaign {
   return {
     id: item.id,
     ownerWallet: item.merchant_wallet ?? "",
-    merchant: item.merchant_name ?? "İşletme",
+    merchant: item.merchant_name ?? "Merchant",
     title: item.title,
     description: item.description,
-    area: item.merchant_address ?? "Yerel",
-    category: "Yerel",
+    area: item.merchant_address ?? "Local",
+    category: "Local",
     priceUsdc: item.price_minor / 1_000_000,
     originalValueUsdc: item.original_value_minor / 1_000_000,
     stock: item.stock,
@@ -42,7 +42,7 @@ export async function listOnchainCampaigns(): Promise<Campaign[]> {
     const all: ApiCampaign[] = [];
     for (let offset = 0; ; offset += pageSize) {
       const response = await fetch(`${API_URL}/api/v1/campaigns?status=${status}&limit=${pageSize}&offset=${offset}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("Kampanyalar API'den yüklenemedi.");
+      if (!response.ok) throw new Error("Could not load offers from the API.");
       const page = await response.json() as ApiCampaign[];
       all.push(...page);
       if (page.length < pageSize) return all;
@@ -54,7 +54,7 @@ export async function listOnchainCampaigns(): Promise<Campaign[]> {
 
 export async function getOnchainCampaign(campaignId: string): Promise<Campaign> {
   const response = await fetch(`${API_URL}/api/v1/campaigns/${encodeURIComponent(campaignId)}`, { cache: "no-store" });
-  if (!response.ok) throw new Error("Kampanya API'den yüklenemedi.");
+  if (!response.ok) throw new Error("Could not load the offer from the API.");
   return toCampaign(await response.json() as ApiCampaign);
 }
 
@@ -64,7 +64,7 @@ export async function publishOnchainCampaign(input: {
   startsAt: number; expiresAt: number;
 }): Promise<Campaign> {
   const session = getStoredSession(input.walletAddress);
-  if (!session) throw new Error("İşletme oturumu bulunamadı. Cüzdanı yeniden bağlayın.");
+  if (!session) throw new Error("Merchant session not found. Reconnect your wallet.");
   const payload = {
     merchant_id: input.merchantId,
     external_id: input.chainId,
@@ -87,19 +87,19 @@ export async function publishOnchainCampaign(input: {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { detail?: string } | null;
-    throw new Error(`Kampanya zincirde oluşturuldu fakat API kaydı yapılamadı: ${body?.detail ?? response.status}. Tekrar zincir işlemi göndermeyin.`);
+    throw new Error(`The offer was created on-chain, but the API record failed: ${body?.detail ?? response.status}. Do not submit another on-chain transaction.`);
   }
   return toCampaign(await response.json() as ApiCampaign);
 }
 
 export async function confirmCampaignCancellation(campaignId: string, walletAddress: string, signature: string): Promise<Campaign> {
   const session = getStoredSession(walletAddress);
-  if (!session) throw new Error("İşletme oturumu bulunamadı.");
+  if (!session) throw new Error("Merchant session not found.");
   const response = await fetch(`${API_URL}/api/v1/campaigns/${campaignId}/cancel-confirm`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.accessToken}` },
     body: JSON.stringify({ transaction_signature: signature }),
   });
-  if (!response.ok) throw new Error("Kampanya zincirde iptal edildi; API durumu güncellenemedi. İşlemi tekrar göndermeyin.");
+  if (!response.ok) throw new Error("The offer was cancelled on-chain, but the API state could not be updated. Do not submit it again.");
   return toCampaign(await response.json() as ApiCampaign);
 }

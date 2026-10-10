@@ -8,11 +8,12 @@ const voucher: Voucher = {
   campaignId: "campaign-1",
   ownerWallet: "7YVValidSolanaWalletAddressForTestOnly111111111",
   merchant: "Validex Cafe",
-  title: "İki kahve, tek fiyat",
+  title: "Two coffees, one price",
   priceUsdc: 5,
   purchasedAt: "2026-09-27T10:00:00.000Z",
   expiresAt: "2027-01-31",
   code: "VLDX-ABCDEF123456",
+  secretBase64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   status: "active",
   campaignCancelled: false,
 };
@@ -25,15 +26,23 @@ describe("Validex voucher QR payload", () => {
       voucherId: voucher.id,
       campaignId: voucher.campaignId,
       code: voucher.code,
+      secret: voucher.secretBase64,
       ownerWallet: voucher.ownerWallet,
     });
   });
 
   it("rejects unrelated QR content", () => {
-    expect(() => decodeVoucherPass('{"type":"other"}')).toThrow("geçerli bir Validex kuponu değil");
+    expect(() => decodeVoucherPass('{"type":"other"}')).toThrow("not a valid Validex voucher");
+  });
+
+  it("rejects a pass without a 32-byte voucher secret", () => {
+    const encoded = encodeVoucherPass(voucher);
+    const payload = JSON.parse(encoded);
+    payload.secret = "public-reference-only";
+    expect(() => decodeVoucherPass(JSON.stringify(payload))).toThrow("not a valid Validex voucher");
   });
 
   it("rejects oversized payloads before parsing", () => {
-    expect(() => decodeVoucherPass("x".repeat(1025))).toThrow("boyutu aşıyor");
+    expect(() => decodeVoucherPass("x".repeat(1025))).toThrow("exceeds the allowed size");
   });
 });

@@ -17,14 +17,14 @@ export function ShareDialog({ title, url, onClose }: { title: string; url: strin
 
   return (
     <div className="modalBackdrop" role="presentation" onMouseDown={onClose}>
-      <section className="shareDialog" role="dialog" aria-modal="true" aria-label="Kampanyayı paylaş" onMouseDown={(event) => event.stopPropagation()}>
-        <button className="modalClose" onClick={onClose} aria-label="Kapat" type="button">×</button>
+      <section className="shareDialog" role="dialog" aria-modal="true" aria-label="Share offer" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modalClose" onClick={onClose} aria-label="Close" type="button">×</button>
         <span className="shareGlyph">↗</span>
-        <p className="eyebrow">KAMPANYAYI PAYLAŞ</p>
+        <p className="eyebrow">SHARE THIS OFFER</p>
         <h2>{title}</h2>
-        <p>Müşteriler bu bağlantıdan kampanya ayrıntılarını görebilir.</p>
-        <div className="shareUrl"><span>{url}</span><button onClick={copy} type="button">{copied ? "Kopyalandı" : "Kopyala"}</button></div>
-        <button className="actionButton" onClick={share} type="button">Paylaşım menüsünü aç</button>
+        <p>Customers can open this link to see the offer details.</p>
+        <div className="shareUrl"><span>{url}</span><button onClick={copy} type="button">{copied ? "Copied" : "Copy"}</button></div>
+        <button className="actionButton" onClick={share} type="button">Open share menu</button>
       </section>
     </div>
   );

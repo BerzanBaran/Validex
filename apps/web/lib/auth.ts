@@ -28,9 +28,9 @@ type TokenResponse = {
 async function readError(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as { detail?: string };
-    return payload.detail ?? "Cüzdan doğrulaması tamamlanamadı.";
+    return payload.detail ?? "Wallet verification could not be completed.";
   } catch {
-    return "Cüzdan doğrulaması tamamlanamadı.";
+    return "Wallet verification could not be completed.";
   }
 }
 

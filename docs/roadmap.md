@@ -1,48 +1,48 @@
-# MVP teslim planı
+# MVP delivery roadmap
 
-## M1 — Temel (mevcut)
+For the most current completion evidence and deployment blockers, see the [hackathon submission pack](hackathon-submission.md). A checked item means code exists, not necessarily that a real devnet transaction has been demonstrated.
 
-- Monorepo, geliştirme ortamı ve sağlık kontrolleri
-- PostgreSQL çekirdek veri modeli
-- Kampanya listeleme/oluşturma API'si
-- Saf alan kuralları: komisyon, hash, satın alma ve kullanım kontrolleri
-- İlk müşteri vitrini
+## M1 — Foundation
 
-## M2 — Cüzdan kimliği (devam ediyor)
+- [x] Monorepo, local environment, and health checks
+- [x] PostgreSQL core data model and campaign API
+- [x] Inventory, date, buyer-limit, commission, and voucher hashing rules
+- [x] Customer marketplace
 
-- [x] Tek kullanımlık ve kısa ömürlü nonce
-- [x] Solflare ve Phantom ile mesaj imzalama
-- [x] Ed25519 doğrulama ve kısa ömürlü erişim tokenı
-- [x] Merchant rolüyle kampanya oluşturma koruması
-- [x] İşletme başvurusu ve yönetici onay akışı
-- [x] Yönetici işletme onay endpoint'leri ve rol koruması
-- [ ] Ayrıntılı yönetici rol matrisi
+## M2 — Wallet identity
 
-## M2.5 — Colosseum ürün demosu (mevcut)
+- [x] Short-lived, single-use login challenge
+- [x] Solflare and Phantom message signing
+- [x] Ed25519 verification and short-lived access token
+- [x] Merchant application, admin review, and role-protected publishing
+- [ ] Detailed admin role matrix
 
-- [x] Kampanya ayrıntı ve kapasite görünümü
-- [x] Cüzdana özel QR kupon ekranı
-- [x] İşletme kampanya yönetimi ve paylaşımı
-- [x] Kamera/yedek kod ile tek kullanımlık kupon doğrulama
-- [x] Solana Devnet RPC üzerinden SOL ve yapılandırılmış USDC bakiye okuma
-- [x] Ön yüz tip kontrolü, QR testleri ve tek komutluk doğrulama
+## M2.5 — Product demo
 
-## M3 — Anchor escrow programı
+- [x] Offer details and capacity
+- [x] Wallet-specific QR voucher page
+- [x] Merchant offer management and sharing
+- [x] Camera and manual QR verification
+- [x] Solana Devnet balance display
+- [x] English UI with a saved light/dark preference
 
-- Platform, merchant, campaign, buyer-counter ve voucher PDA'ları
-- Test SPL mint ile satın alma/escrow
-- Kullanımda %2 komisyon ve ödeme
-- İptal/iade yolları ve kapsamlı Anchor testleri
+## M3 — Anchor escrow
 
-## M4 — Zincir entegrasyonu
+- [x] Platform, merchant, campaign, buyer-counter, and voucher PDAs
+- [x] Purchase, redemption with a 2% fee, cancellation, and refund paths
+- [x] Pure rule unit-test source for mint, authority, replay, time, limits, and split math
+- [ ] Run Rust tests, SBF build, and validator-level account/transfer integration tests
 
-- [x] Şifreli kupon sırrı ve `pending_chain` satın alma intent'i
-- [ ] Anchor satın alma işlemi oluşturma
-- RPC kesinlik takipçisi ve idempotent webhook/worker
-- QR üretimi, tarama ve iki katmanlı kullanım doğrulaması
+## M4 — Chain integration
 
-## M5 — Operasyon
+- [x] Encrypted voucher secret and `pending_chain` purchase intent
+- [x] Client transaction builders and wallet signing flow
+- [x] RPC finality tracker, proof checks, signature replay protection, and pending recovery
+- [ ] Devnet deployment and real Solflare end-to-end transaction evidence
 
-- İşletme başvurusu ve manuel yönetici onayı
-- Satış/gelir raporu, denetim kayıtları ve rate limiting
-- Tehdit modellemesi, yük testleri ve devnet uçtan uca test
+## M5 — Operations and submission
+
+- [x] Merchant approval, QR staff access, audit events, and process-local rate limiting
+- [x] Demo content, architecture diagram, English submission copy, and video outlines
+- [ ] Distributed rate-limit store, threat review, load testing, and devnet E2E tests
+- [ ] Record and submit pitch and product-demo videos

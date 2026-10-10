@@ -46,7 +46,7 @@ export default function CampaignDetailPage() {
   async function purchase() {
     if (!walletAddress) {
       setPhase("failed");
-      setMessage("Satın almak için önce Solflare veya Phantom cüzdanınızı bağlayın.");
+      setMessage("Connect your Solflare or Phantom wallet before buying.");
       return;
     }
     setPhase("preparing");
@@ -59,12 +59,12 @@ export default function CampaignDetailPage() {
       window.setTimeout(() => router.push(`/musteri/kuponlar/${voucher.id}`), 650);
     } catch (error) {
       setPhase("failed");
-      setMessage(error instanceof Error ? error.message : "Kupon oluşturulamadı.");
+      setMessage(error instanceof Error ? error.message : "Could not create the voucher.");
     }
   }
 
-  if (!marketplace.ready) return <main className="dashboardPage"><div className="pageState">Kampanya yükleniyor…</div></main>;
-  if (!campaign) return <main className="dashboardPage"><div className="pageState"><h1>{marketplace.campaignError ? "Kampanya yüklenemedi" : "Kampanya bulunamadı"}</h1>{marketplace.campaignError ? <p>{marketplace.campaignError}</p> : null}<Link href="/musteri">Kampanyalara dön</Link></div></main>;
+  if (!marketplace.ready) return <main className="dashboardPage"><div className="pageState">Loading offer…</div></main>;
+  if (!campaign) return <main className="dashboardPage"><div className="pageState"><h1>{marketplace.campaignError ? "Offer could not be loaded" : "Offer not found"}</h1>{marketplace.campaignError ? <p>{marketplace.campaignError}</p> : null}<Link href="/musteri">Back to offers</Link></div></main>;
 
   const expired = new Date(campaign.expiresAt).getTime() <= Date.now();
   const soldOut = campaign.sold >= campaign.stock;
@@ -76,29 +76,29 @@ export default function CampaignDetailPage() {
   return (
     <main className="dashboardPage detailPage">
       <DashboardHeader role="customer" onAddressChange={setWalletAddress} />
-      <div className="dashboardShell breadcrumb"><Link href="/musteri">← Kampanyalar</Link><span>/</span><span>{campaign.merchant}</span></div>
+      <div className="dashboardShell breadcrumb"><Link href="/musteri">← Offers</Link><span>/</span><span>{campaign.merchant}</span></div>
       <section className="dashboardShell campaignDetailHero">
         <div className={`campaignDetailVisual ${campaign.accent}`}>
-          <StatusBadge tone={available ? "success" : "warning"}>{available ? "SATIŞTA" : soldOut ? "TÜKENDİ" : "KAPALI"}</StatusBadge>
-          <div><span>Validex yerel fırsat</span><strong>%{discount}</strong><small>avantaj</small></div>
+          <StatusBadge tone={available ? "success" : "warning"}>{available ? "AVAILABLE" : soldOut ? "SOLD OUT" : "CLOSED"}</StatusBadge>
+          <div><span>Validex local offer</span><strong>{discount}%</strong><small>off</small></div>
         </div>
         <div className="campaignDetailCopy">
-          <div className="detailTopline"><p className="eyebrow">{campaign.merchant} · {campaign.category} · {campaign.area}</p><button className="secondaryButton" onClick={() => setShareOpen(true)}>Paylaş ↗</button></div>
+          <div className="detailTopline"><p className="eyebrow">{campaign.merchant} · {campaign.category} · {campaign.area}</p><button className="secondaryButton" onClick={() => setShareOpen(true)}>Share ↗</button></div>
           <h1>{campaign.title}</h1>
           <p className="detailLead">{campaign.description}</p>
-          <div className="pricePanel"><div><strong>{campaign.priceUsdc}</strong><span>USDC</span></div><p><s>{campaign.originalValueUsdc} USDC</s><br />Kupon başına fiyat</p></div>
+          <div className="pricePanel"><div><strong>{campaign.priceUsdc}</strong><span>USDC</span></div><p><s>{campaign.originalValueUsdc} USDC</s><br />Per voucher</p></div>
           <CapacityMeter sold={campaign.sold} stock={campaign.stock} />
           <TransactionFeedback phase={phase} message={message} />
-          {signature ? <p className="chainDisclosure" role="status">İşlem imzası: {signature}<br />Ağ durumu: {chainStatus === "confirmed" ? "confirmed — kesinleşme bekleniyor" : chainStatus === "finalized" ? "finalized" : chainStatus === "failed" ? "başarısız" : "bekleniyor"}</p> : null}
+          {signature ? <p className="chainDisclosure" role="status">Transaction signature: {signature}<br />Network status: {chainStatus === "confirmed" ? "confirmed — awaiting finality" : chainStatus === "finalized" ? "finalized" : chainStatus === "failed" ? "failed" : "pending"}</p> : null}
           <button className="actionButton detailPurchase" disabled={!available || phase === "preparing"} onClick={() => void purchase()} type="button">
-            {phase === "preparing" ? "Cüzdan onayı bekleniyor…" : available ? "USDC ile satın al" : "Zincir ödemesi henüz kapalı"}
+            {phase === "preparing" ? "Waiting for wallet approval…" : available ? "Buy with USDC" : "On-chain payments unavailable"}
           </button>
-          <p className="chainDisclosure">{available ? "Cüzdanınız işlemi imzalar; kupon ancak USDC escrow'a ulaşıp zincirde onaylanınca etkinleşir." : "Bu kampanya zincire bağlı değil veya ödeme yapılandırması eksik. USDC tahsil edilmez."}</p>
+          <p className="chainDisclosure">{available ? "Your wallet signs the transaction. The voucher activates only after USDC reaches escrow and the chain confirms it." : "This offer is not connected to the chain or payment setup is incomplete. No USDC will be charged."}</p>
         </div>
       </section>
       <section className="dashboardShell detailInfoGrid">
-        <article><p className="eyebrow">KULLANIM</p><h2>Nasıl çalışır?</h2><ol><li>Cüzdanınızı bağlayın ve kuponu alın.</li><li>Tek kullanımlık QR kodunu işletmede gösterin.</li><li>İşletme kodu doğruladığında kupon kullanılmış olur.</li></ol></article>
-        <article><p className="eyebrow">KOŞULLAR</p><h2>Kupon bilgileri</h2><dl><div><dt>Son kullanım</dt><dd>{campaign.expiresAt}</dd></div><div><dt>Kullanım sınırı</dt><dd>Cüzdan başına 1</dd></div><div><dt>Ağ</dt><dd>Solana Devnet</dd></div></dl></article>
+        <article><p className="eyebrow">REDEMPTION</p><h2>How it works</h2><ol><li>Connect your wallet and buy the voucher.</li><li>Show its single-use QR code at the business.</li><li>You and the merchant approve redemption with your wallets.</li></ol></article>
+        <article><p className="eyebrow">TERMS</p><h2>Voucher details</h2><dl><div><dt>Expires</dt><dd>{campaign.expiresAt}</dd></div><div><dt>Limit</dt><dd>1 per wallet</dd></div><div><dt>Network</dt><dd>Solana Devnet</dd></div></dl></article>
       </section>
       {shareOpen ? <ShareDialog title={campaign.title} url={shareUrl} onClose={() => setShareOpen(false)} /> : null}
     </main>

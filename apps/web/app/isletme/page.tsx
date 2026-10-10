@@ -27,7 +27,7 @@ const EMPTY_FORM = {
   title: "",
   description: "",
   area: "",
-  category: "Kafe",
+  category: "Cafe",
   priceUsdc: "",
   originalValueUsdc: "",
   stock: "",
@@ -59,7 +59,7 @@ export default function MerchantDashboard() {
     getMyMerchant(walletAddress)
       .then((profile) => { if (active) setMerchantProfile(profile); })
       .catch((error) => {
-        if (active) setNotice(error instanceof Error ? error.message : "İşletme bilgisi alınamadı.");
+        if (active) setNotice(error instanceof Error ? error.message : "Could not load business details.");
       });
     return () => { active = false; };
   }, [walletAddress]);
@@ -78,7 +78,7 @@ export default function MerchantDashboard() {
     let active = true;
     listStaff(walletAddress)
       .then((items) => { if (active) setStaff(items); })
-      .catch((error) => { if (active) setNotice(error instanceof Error ? error.message : "Çalışanlar alınamadı."); });
+      .catch((error) => { if (active) setNotice(error instanceof Error ? error.message : "Could not load staff members."); });
     return () => { active = false; };
   }, [walletAddress, merchantProfile?.verification_status]);
 
@@ -99,15 +99,15 @@ export default function MerchantDashboard() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!walletAddress) {
-      setNotice("Kampanya yayımlamak için önce işletme cüzdanınızı bağlayın.");
+      setNotice("Connect your merchant wallet before publishing an offer.");
       return;
     }
     if (merchantProfile?.verification_status !== "verified") {
-      setNotice("Kampanya yayımlamak için işletme başvurunuzun onaylanması gerekir.");
+      setNotice("Your merchant application must be approved before publishing an offer.");
       return;
     }
     if (!chainConfigured()) {
-      setNotice("Program ve USDC mint ayarlanana kadar gerçek kampanya yayımlanamaz.");
+      setNotice("The program and USDC mint must be configured before publishing a live offer.");
       return;
     }
     const draft: CampaignDraft = {
@@ -123,18 +123,18 @@ export default function MerchantDashboard() {
       expiresAt: form.expiresAt,
     };
     if (draft.priceUsdc <= 0 || draft.stock <= 0 || draft.originalValueUsdc < draft.priceUsdc) {
-      setNotice("Fiyat, ürün değeri ve stok alanlarını kontrol edin.");
+      setNotice("Check the price, original value, and stock fields.");
       return;
     }
     if (new Date(draft.expiresAt).getTime() <= Date.now()) {
-      setNotice("Son kullanım tarihi gelecekte olmalıdır.");
+      setNotice("The expiration date must be in the future.");
       return;
     }
     try {
       setPublishing(true);
       const config = await loadChain();
       if (!await accountExists(config, merchantPda(config, walletAddress))) {
-        throw new Error("İşletmeniz henüz zincirde yönetici tarafından kaydedilmemiş.");
+        throw new Error("Your business has not yet been registered on-chain by the admin.");
       }
       const campaignId = randomCampaignId();
       const startsAt = Math.floor(Date.now() / 1000);
@@ -157,9 +157,9 @@ export default function MerchantDashboard() {
       });
       marketplace.saveCampaign(published);
       setForm(EMPTY_FORM);
-      setNotice("Kampanya zincirde onaylandı ve yayımlandı.");
+      setNotice("Your offer was confirmed on-chain and published.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Kampanya zincirde oluşturulamadı.");
+      setNotice(error instanceof Error ? error.message : "The on-chain offer could not be created.");
     } finally {
       setPublishing(false);
     }
@@ -173,9 +173,9 @@ export default function MerchantDashboard() {
       const profile = await createMerchantApplication(walletAddress, application);
       setMerchantProfile(profile);
       setApplication(EMPTY_APPLICATION);
-      setNotice("İşletme başvurunuz alındı. Yönetici onayından sonra kampanya yayımlayabilirsiniz.");
+      setNotice("Your business application was received. You can publish offers after admin approval.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Başvuru oluşturulamadı.");
+      setNotice(error instanceof Error ? error.message : "Could not submit the application.");
     } finally {
       setApplicationBusy(false);
     }
@@ -189,9 +189,9 @@ export default function MerchantDashboard() {
       await grantStaff(walletAddress, staffWallet.trim());
       setStaff(await listStaff(walletAddress));
       setStaffWallet("");
-      setNotice("Çalışan cüzdanına yalnızca QR doğrulama yetkisi verildi.");
+      setNotice("This staff wallet can verify QR codes only.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Çalışan yetkisi verilemedi.");
+      setNotice(error instanceof Error ? error.message : "Could not grant staff access.");
     } finally { setStaffBusy(false); }
   }
 
@@ -201,9 +201,9 @@ export default function MerchantDashboard() {
       setStaffBusy(true);
       await revokeStaff(walletAddress, staffId);
       setStaff(await listStaff(walletAddress));
-      setNotice("Çalışanın QR yetkisi kaldırıldı.");
+      setNotice("Staff QR access was revoked.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Çalışan yetkisi kaldırılamadı.");
+      setNotice(error instanceof Error ? error.message : "Could not revoke staff access.");
     } finally { setStaffBusy(false); }
   }
 
@@ -212,69 +212,69 @@ export default function MerchantDashboard() {
       <DashboardHeader role="merchant" onAddressChange={setWalletAddress} />
       <section className="dashboardShell dashboardHero merchantHero">
         <div>
-          <p className="eyebrow"><span className="sparkle">✳</span> İŞLETMENİN YENİ VİTRİNİ</p>
-          <h1>Güzel bir teklif,<br /><em>yeni bir müdavim.</em></h1>
-          <p>Kampanyanı oluştur, mahallene ulaş. Kuponlarını, satışlarını ve misafirlerini tek bir yerden yönet.</p>
+          <p className="eyebrow"><span className="sparkle">✳</span> YOUR BUSINESS, FRONT AND CENTER</p>
+          <h1>A great offer,<br /><em>a new regular.</em></h1>
+          <p>Create an offer that reaches your neighborhood. Manage vouchers, sales, and guests in one place.</p>
         </div>
-        <div className="verificationCard"><span>İŞLETME DURUMU</span><strong>{!walletAddress ? "Cüzdan bekleniyor" : merchantProfile === undefined ? "Kontrol ediliyor…" : merchantProfile === null && staffCampaigns.length ? "QR doğrulama çalışanı" : merchantProfile === null ? "Başvuru gerekli" : merchantProfile.verification_status === "verified" ? "Onaylı işletme" : merchantProfile.verification_status === "pending" ? "Onay bekleniyor" : "Başvuru reddedildi"}</strong><small>{merchantProfile?.business_name ?? (staffCampaigns.length ? "Atanmış kampanyaların QR kodlarını doğrulayabilirsiniz." : "Kampanya yayımlamak için işletme doğrulaması zorunludur.")}</small></div>
+        <div className="verificationCard"><span>MERCHANT STATUS</span><strong>{!walletAddress ? "Connect a wallet" : merchantProfile === undefined ? "Checking…" : merchantProfile === null && staffCampaigns.length ? "QR verification staff" : merchantProfile === null ? "Application required" : merchantProfile.verification_status === "verified" ? "Verified business" : merchantProfile.verification_status === "pending" ? "Awaiting approval" : "Application declined"}</strong><small>{merchantProfile?.business_name ?? (staffCampaigns.length ? "You can verify QR codes for assigned offers." : "Business verification is required to publish offers.")}</small></div>
       </section>
 
       {notice ? <div className="dashboardShell notice" role="status">{notice}<button onClick={() => setNotice(null)}>×</button></div> : null}
 
       {walletAddress && merchantProfile === null && !staffCampaigns.length ? (
         <section className="dashboardShell onboardingCard">
-          <div><p className="eyebrow">İŞLETME BAŞVURUSU</p><h2>Validex’te işletmeni doğrula.</h2><p>İşletme bilgileri zincire yazılmaz. Yönetici incelemesinden sonra kampanya yayımlama yetkisi cüzdanınıza tanımlanır.</p></div>
+          <div><p className="eyebrow">MERCHANT APPLICATION</p><h2>Verify your business on Validex.</h2><p>Your business details are not written on-chain. After admin review, your wallet can publish offers.</p></div>
           <form onSubmit={submitApplication}>
-            <label>İşletme adı<input required minLength={2} value={application.business_name} onChange={(event) => setApplication((current) => ({ ...current, business_name: event.target.value }))} /></label>
-            <label>Adres<input required minLength={5} value={application.address} onChange={(event) => setApplication((current) => ({ ...current, address: event.target.value }))} /></label>
-            <label>Açıklama<textarea value={application.description} onChange={(event) => setApplication((current) => ({ ...current, description: event.target.value }))} /></label>
-            <button className="actionButton" disabled={applicationBusy} type="submit">{applicationBusy ? "Gönderiliyor…" : "Başvuruyu gönder"}</button>
+            <label>Business name<input required minLength={2} value={application.business_name} onChange={(event) => setApplication((current) => ({ ...current, business_name: event.target.value }))} /></label>
+            <label>Address<input required minLength={5} value={application.address} onChange={(event) => setApplication((current) => ({ ...current, address: event.target.value }))} /></label>
+            <label>Description<textarea value={application.description} onChange={(event) => setApplication((current) => ({ ...current, description: event.target.value }))} /></label>
+            <button className="actionButton" disabled={applicationBusy} type="submit">{applicationBusy ? "Submitting…" : "Submit application"}</button>
           </form>
         </section>
       ) : null}
 
-      {merchantProfile?.verification_status === "pending" ? <div className="dashboardShell approvalState"><span>⌛</span><div><strong>Başvurunuz inceleniyor</strong><p>Onaylandığında kampanya yayımlama alanı etkinleşecektir.</p></div></div> : null}
+      {merchantProfile?.verification_status === "pending" ? <div className="dashboardShell approvalState"><span>⌛</span><div><strong>Your application is under review</strong><p>Offer publishing will unlock after approval.</p></div></div> : null}
 
-      {merchantProfile?.verification_status === "verified" && walletAddress ? <section className="dashboardShell onboardingCard"><div><p className="eyebrow">ÇALIŞAN YETKİLERİ</p><h2>QR doğrulama cüzdanları</h2><p>Çalışanlar kuponun API ve zincir durumunu kontrol eder. Kupon kullanımı ve USDC ödemesi için işletme sahibi imzası gerekir.</p></div><div><form className="manualCodeForm" onSubmit={addStaff}><label>Çalışan Solana public key'i<input required value={staffWallet} onChange={(event) => setStaffWallet(event.target.value)} /></label><button className="secondaryButton wide" disabled={staffBusy} type="submit">QR yetkisi ver</button></form><div className="manageList">{staff.filter((item) => item.active).map((item) => <div className="manageRow" key={item.id}><span>{item.wallet_address}</span><button className="secondaryButton" disabled={staffBusy} onClick={() => void removeStaff(item.id)} type="button">Yetkiyi kaldır</button></div>)}</div></div></section> : null}
+      {merchantProfile?.verification_status === "verified" && walletAddress ? <section className="dashboardShell onboardingCard"><div><p className="eyebrow">STAFF ACCESS</p><h2>QR verification wallets</h2><p>Staff can check a voucher's API and on-chain status. Redemption and USDC payout still require the owner's signature.</p></div><div><form className="manualCodeForm" onSubmit={addStaff}><label>Staff Solana public key<input required value={staffWallet} onChange={(event) => setStaffWallet(event.target.value)} /></label><button className="secondaryButton wide" disabled={staffBusy} type="submit">Grant QR access</button></form><div className="manageList">{staff.filter((item) => item.active).map((item) => <div className="manageRow" key={item.id}><span>{item.wallet_address}</span><button className="secondaryButton" disabled={staffBusy} onClick={() => void removeStaff(item.id)} type="button">Revoke access</button></div>)}</div></div></section> : null}
 
-      {staffCampaigns.length ? <section className="dashboardShell onboardingCard"><div><p className="eyebrow">ÇALIŞAN ERİŞİMİ</p><h2>Doğrulayabileceğiniz kampanyalar</h2><p>Bu erişim yalnızca QR kontrolü içindir; cüzdanınız escrow ödemesini imzalayamaz.</p></div><div className="manageList">{staffCampaigns.map((item) => <Link className="manageRow" href={`/isletme/kampanyalar/${item.campaign_id}/tara`} key={item.campaign_id}>{item.merchant_name} · {item.title} →</Link>)}</div></section> : null}
+      {staffCampaigns.length ? <section className="dashboardShell onboardingCard"><div><p className="eyebrow">STAFF ACCESS</p><h2>Offers you can verify</h2><p>This access is for QR checks only; your wallet cannot authorize escrow payouts.</p></div><div className="manageList">{staffCampaigns.map((item) => <Link className="manageRow" href={`/isletme/kampanyalar/${item.campaign_id}/tara`} key={item.campaign_id}>{item.merchant_name} · {item.title} →</Link>)}</div></section> : null}
 
       <section className="dashboardShell metricGrid">
-        <div><span>Aktif kampanya</span><strong>{myCampaigns.filter((item) => item.status === "published").length}</strong></div>
-        <div><span>Satılan kupon</span><strong>{totalSales}</strong></div>
-        <div><span>Brüt satış tutarı (escrow dahil)</span><strong>{grossRevenue.toFixed(2)} USDC</strong></div>
+        <div><span>Active offers</span><strong>{myCampaigns.filter((item) => item.status === "published").length}</strong></div>
+        <div><span>Vouchers sold</span><strong>{totalSales}</strong></div>
+        <div><span>Gross sales (including escrow)</span><strong>{grossRevenue.toFixed(2)} USDC</strong></div>
       </section>
 
       <section className="dashboardShell merchantWorkspace">
         <form className="campaignForm" onSubmit={submit}>
-          <div className="formHeading"><p className="eyebrow">YENİ BİR FIRSAT</p><h2>Kuponunu tasarla <span className="headingSpark">✳</span></h2><p>Yayımlanan kupon müşteri panelinde hemen görünür.</p></div>
-          <label>İşletme adı<input required value={form.merchant} onChange={(event) => update("merchant", event.target.value)} placeholder="Örn. Kavurucu No.7" /></label>
-          <label>Kampanya başlığı<input required minLength={3} value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="Örn. İki kahve, tek fiyat" /></label>
-          <label>Açıklama<textarea required minLength={10} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Kampanyanın kapsamı ve kullanım koşulları" /></label>
-          <div className="formRow"><label>Semt<input required value={form.area} onChange={(event) => update("area", event.target.value)} placeholder="Kadıköy" /></label><label>Kategori<select value={form.category} onChange={(event) => update("category", event.target.value)}><option>Kafe</option><option>Kahve</option><option>Kahvaltı</option><option>Restoran</option></select></label></div>
-          <div className="formRow"><label>Kupon fiyatı (USDC)<input required min="0.01" step="0.01" type="number" value={form.priceUsdc} onChange={(event) => update("priceUsdc", event.target.value)} /></label><label>Normal değer (USDC)<input required min="0.01" step="0.01" type="number" value={form.originalValueUsdc} onChange={(event) => update("originalValueUsdc", event.target.value)} /></label></div>
-          <div className="formRow"><label>Stok<input required min="1" type="number" value={form.stock} onChange={(event) => update("stock", event.target.value)} /></label><label>Son kullanım tarihi<input required type="date" value={form.expiresAt} onChange={(event) => update("expiresAt", event.target.value)} /></label></div>
-          <div className="feePreview"><span>Platform komisyonu</span><strong>%2</strong><small>Kupon iki tarafça kullanıldığında escrow'dan kesilir.</small></div>
-          <button className="actionButton" disabled={merchantProfile?.verification_status !== "verified" || !chainConfigured() || publishing} type="submit">{publishing ? "Cüzdan ve zincir onayı bekleniyor…" : "Kampanyayı zincirde yayımla"}</button>
+          <div className="formHeading"><p className="eyebrow">A FRESH OFFER</p><h2>Create your voucher <span className="headingSpark">✳</span></h2><p>Published offers appear in the customer dashboard.</p></div>
+          <label>Business name<input required value={form.merchant} onChange={(event) => update("merchant", event.target.value)} placeholder="e.g. Corner Coffee No. 7" /></label>
+          <label>Offer title<input required minLength={3} value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="e.g. Two coffees for the price of one" /></label>
+          <label>Description<textarea required minLength={10} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="What's included and how to redeem" /></label>
+          <div className="formRow"><label>Neighborhood<input required value={form.area} onChange={(event) => update("area", event.target.value)} placeholder="e.g. Brooklyn" /></label><label>Category<select value={form.category} onChange={(event) => update("category", event.target.value)}><option>Cafe</option><option>Coffee</option><option>Brunch</option><option>Restaurant</option></select></label></div>
+          <div className="formRow"><label>Voucher price (USDC)<input required min="0.01" step="0.01" type="number" value={form.priceUsdc} onChange={(event) => update("priceUsdc", event.target.value)} /></label><label>Original value (USDC)<input required min="0.01" step="0.01" type="number" value={form.originalValueUsdc} onChange={(event) => update("originalValueUsdc", event.target.value)} /></label></div>
+          <div className="formRow"><label>Stock<input required min="1" type="number" value={form.stock} onChange={(event) => update("stock", event.target.value)} /></label><label>Expiration date<input required type="date" value={form.expiresAt} onChange={(event) => update("expiresAt", event.target.value)} /></label></div>
+          <div className="feePreview"><span>Platform fee</span><strong>2%</strong><small>Deducted from escrow when both parties redeem the voucher.</small></div>
+          <button className="actionButton" disabled={merchantProfile?.verification_status !== "verified" || !chainConfigured() || publishing} type="submit">{publishing ? "Waiting for wallet and chain confirmation…" : "Publish offer on-chain"}</button>
         </form>
 
         <div className="merchantCampaigns">
-          <div className="contentHeading"><div><p className="eyebrow">İŞLETMENİN VİTRİNİ</p><h2>Kampanyaların</h2></div></div>
-          {marketplace.campaignError ? <div className="emptyState" role="alert">Kampanyalar API'den yüklenemedi: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Tekrar dene</button></div> : null}
-          {!walletAddress ? <div className="emptyState">Kampanyalarınızı görmek için işletme cüzdanınızı bağlayın.</div> : null}
-          {walletAddress && !marketplace.campaignError && !myCampaigns.length ? <div className="emptyState">Henüz kampanya oluşturmadınız. Formu doldurarak ilk kuponunuzu yayımlayın.</div> : null}
+          <div className="contentHeading"><div><p className="eyebrow">YOUR STOREFRONT</p><h2>Your offers</h2></div></div>
+          {marketplace.campaignError ? <div className="emptyState" role="alert">Offers could not be loaded: {marketplace.campaignError} <button className="secondaryButton" onClick={() => void marketplace.refreshCampaigns().catch(() => {})} type="button">Try again</button></div> : null}
+          {!walletAddress ? <div className="emptyState">Connect your merchant wallet to see your offers.</div> : null}
+          {walletAddress && !marketplace.campaignError && !myCampaigns.length ? <div className="emptyState">No offers yet. Fill out the form to publish your first voucher.</div> : null}
           <div className="manageList">
             {myCampaigns.map((campaign) => (
               <article className="manageRow" key={campaign.id}>
-                <div><span className={`statusPill ${campaign.status}`}>{campaign.status === "published" ? "YAYINDA" : campaign.status === "cancelled" ? "İPTAL EDİLDİ" : "KAPALI"}</span><h3>{campaign.title}</h3><p>{campaign.priceUsdc} USDC · {campaign.sold}/{campaign.stock} satıldı · {campaign.expiresAt}</p></div>
-                <div className="manageActions"><Link href={`/isletme/kampanyalar/${campaign.id}`}>Yönet / iptal et</Link></div>
+                <div><span className={`statusPill ${campaign.status}`}>{campaign.status === "published" ? "LIVE" : campaign.status === "cancelled" ? "CANCELLED" : "CLOSED"}</span><h3>{campaign.title}</h3><p>{campaign.priceUsdc} USDC · {campaign.sold}/{campaign.stock} sold · {campaign.expiresAt}</p></div>
+                <div className="manageActions"><Link href={`/isletme/kampanyalar/${campaign.id}`}>Manage / cancel</Link></div>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="demoBanner">{chainConfigured() ? "Yayımlama için işletme cüzdanı imzası ve zincir onayı gerekir. Kampanya listesi API'den yüklenir." : "Zincir modu kapalı: Yönetici adresi, program ve USDC mint kurulmadan kampanya yayımlanamaz."}</div>
+      <div className="demoBanner">{chainConfigured() ? "Publishing requires your merchant wallet signature and on-chain confirmation." : "On-chain mode is off until the admin, program, and USDC mint are configured."}</div>
     </main>
   );
 }

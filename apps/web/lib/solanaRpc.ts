@@ -18,9 +18,9 @@ async function rpc<T>(method: string, params: unknown[]): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
-  if (!response.ok) throw new Error("Solana RPC bağlantısı kurulamadı.");
+  if (!response.ok) throw new Error("Could not connect to Solana RPC.");
   const payload = await response.json() as { result?: T; error?: { message?: string } };
-  if (payload.error || payload.result === undefined) throw new Error(payload.error?.message ?? "RPC yanıtı geçersiz.");
+  if (payload.error || payload.result === undefined) throw new Error(payload.error?.message ?? "Invalid RPC response.");
   return payload.result;
 }
 

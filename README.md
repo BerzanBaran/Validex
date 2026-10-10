@@ -1,47 +1,49 @@
 # Validex
 
-Validex, yerel işletmelerin Solana üzerinde USDC karşılığı tek kullanımlık kupon yayımladığı saklamasız bir pazaryeri prototipidir.
+Validex is a non-custodial marketplace prototype where independent local businesses publish single-use vouchers priced in USDC on Solana.
 
-Hackathon teslim hazırlığı, doğrulama sınırları, demo seed verileri, mimari şema ve video çekim planı için [teslim paketine](docs/hackathon-submission.md) bakın. Gerçek devnet dağıtımı ve Solflare ödeme kanıtı henüz tamamlanmış değildir.
+The [hackathon submission pack](docs/hackathon-submission.md) contains the delivery checklist, architecture diagram, demo seed data, and video outlines. The Anchor program is deployed on Devnet; platform initialization and a Solflare payment proof are **not complete** yet.
 
-## İlk kilometre taşı
+## What it does
 
-Bu başlangıç sürümü, ürünün en riskli iş kurallarını merkeze alır:
+- Merchants create limited offers with stock, dates, and a per-wallet purchase limit.
+- Customers connect Solflare or Phantom, pay USDC into campaign escrow, and receive a single-use QR voucher.
+- A voucher activates only after the API verifies the on-chain transaction at `finalized` commitment.
+- Redemption requires both customer and merchant wallet signatures. The program atomically pays 98% to the merchant and 2% to the platform.
+- After cancellation or expiry, the owner of an unused voucher can request a full refund from escrow.
 
-- Kampanya stok, tarih ve kullanıcı limiti kontrolü
-- Kupon kimliğinin açık biçimde zincire yazılmaması
-- Escrow modelinde güvenli komisyon hesabı
-- Kuponun yalnızca yetkili işletme tarafından ve bir kez kullanılması
-- Zincir işlemi kesinleşmeden off-chain kaydın aktifleşmemesi
+No private key or seed phrase is ever collected by Validex. Voucher secrets are encrypted in PostgreSQL; only their SHA-256 hashes are stored on-chain.
 
-## Depo yapısı
+## Repository
 
 ```text
-apps/web/          Next.js müşteri vitrini
-services/api/      FastAPI ve PostgreSQL servisi
-programs/          Anchor programı için sözleşme alanı
-docs/              Mimari kararlar ve teslim planı
+apps/web/          Next.js marketplace and dashboards
+services/api/      FastAPI, PostgreSQL index, authentication, and verification
+programs/          Anchor escrow program
+docs/              Architecture, roadmap, and hackathon materials
 ```
 
-## Yerel geliştirme
+## Run locally
 
-Gereksinimler: Docker Desktop ve Node.js 20.9+.
+Requirements: Docker Desktop and Node.js 20.9+.
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Servisler:
+Local endpoints:
 
 - Web: http://localhost:3000
-- Müşteri paneli: http://localhost:3000/musteri
-- İşletme paneli: http://localhost:3000/isletme
+- Customer dashboard: http://localhost:3000/musteri
+- Merchant dashboard: http://localhost:3000/isletme
 - API: http://localhost:8000
-- API dokümantasyonu: http://localhost:8000/docs
+- API docs: http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 
-Yalnızca API alan testlerini çalıştırmak için Python 3.13 ortamında:
+The app's UI is in English. Visitors can choose light or dark mode; their preference is saved in the browser. URL paths such as `/musteri` and `/isletme` remain unchanged for compatibility.
+
+To run the API tests with Python 3.13 (Python 3.14 also works locally):
 
 ```powershell
 cd services/api
@@ -49,63 +51,40 @@ python -m pip install -e ".[dev]"
 python -m pytest
 ```
 
-Yerel Python 3.14 desteklenir; tekrarlanabilir geliştirme ve CI ortamı için Docker imajı Python 3.13 kullanır.
-
-
-## Güvenlik sınırı
-
-Validex hiçbir kullanıcı veya işletme private key/seed phrase bilgisini almaz. API yüksek entropili kupon sırrını şifreli saklar; zincire yalnızca SHA-256 özeti yazılır. QR, zincirdeki kupon adresini taşır. Kullanım için müşteri ve işletme cüzdanlarının ikisi de aynı işlemi imzalar; sır zincire açıklanmaz.
-
-## Zincir ödeme akışı
-
-Kampanya listesi ve cüzdana ait kuponlar API/PostgreSQL'den yüklenir; `localStorage` bu kayıtlar için kullanılmaz. İşletme kampanyayı cüzdanıyla zincirde oluşturup API'ye doğrulatır. Müşteri `purchase-intent` API'sinden bekleyen kuponu alır, sonra Solflare/Phantom ile USDC'yi kampanya escrow kasasına gönderir. Kupon yalnızca zincir hesabı ve işlem imzası `finalized` düzeyinde doğrulanıp API kaydı aktifleşince kullanılabilir. Sayfa kapanırsa bekleyen kuponun zincir durumu tekrar kontrol edilerek API kaydı kurtarılır; ödeme otomatik olarak yeniden gönderilmez. Devnet kurulumu tamamlanana kadar zincir işlem düğmeleri kapalıdır.
-
-İşlem takipçisi `getSignatureStatuses` ile `pending`/`confirmed`/`finalized`/`failed` durumlarını okur. Kimlik doğrulanmış kullanıcı `GET /api/v1/transactions/{signature}/status` adresinden ağ durumunu sorgulayabilir. Finansal kayıtlar yalnızca `finalized` işlem gövdesi (`getTransaction`) beklenen Validex talimatı, imzalayanlar, hesaplar, USDC mint'i, token programı ve tam transfer tutarıyla eşleşirse güncellenir. İşlem imzaları PostgreSQL'de benzersizdir; aynı imza farklı kupon veya kampanya için kullanılamaz. Bu doğrulama RPC kanıtına dayanır; gerçek devnet testi, program ve mint adresleri girilmeden yapılamaz.
-
-## Cüzdanla giriş
-
-Paneldeki Solflare ve Phantom bağlantıları artık adres sahipliğini mesaj imzasıyla doğrular. Solflare, Colosseum demosu için birincil cüzdandır:
-
-1. `POST /api/v1/auth/challenge` tek kullanımlık, beş dakika geçerli mesaj üretir.
-2. Seçilen Solana cüzdanı mesajı Ed25519 ile imzalar; bu işlem transfer veya ağ ücreti oluşturmaz.
-3. `POST /api/v1/auth/verify` imzayı Solana public key'iyle doğrular.
-4. Başarılı girişte 15 dakikalık erişim tokenı verilir ve challenge tekrar kullanılamaz.
-5. `GET /api/v1/auth/me` tokenın bağlı olduğu kullanıcı ve rolü döndürür.
-
-Erişim tokenı tarayıcı sekmesine özel `sessionStorage` içinde tutulur. Gerçek kampanya oluşturma API'si yalnızca `merchant` rolüne ve ilgili işletme kaydının sahibi olan cüzdana açıktır.
-
-Yerel API çalışırken uçtan uca kimlik duman testini çalıştırmak için:
-
-```powershell
-python services/api/scripts/smoke_auth.py
-```
-
-## Colosseum demo akışları
-
-- `/kampanyalar/[id]`: kampanya detayı, kapasite ve satın alma geri bildirimi
-- `/musteri/kuponlar/[id]`: cüzdana özel tek kullanımlık QR kuponu
-- `/isletme/kampanyalar/[id]`: satış, kullanım ve paylaşım yönetimi
-- `/isletme/kampanyalar/[id]/tara`: kamera veya yedek kod ile kupon doğrulama
-
-Web doğrulamasının tamamını tek komutla çalıştırmak için:
+To verify the web app:
 
 ```powershell
 cd apps/web
 npm run verify
 ```
 
-Uygulama ağı `NEXT_PUBLIC_SOLANA_RPC_URL` üzerinden Solana Devnet olarak sabitlenir. Gerçek işlem kodu eklendi, ancak yönetici adresi ve devnet USDC mint adresi henüz verilmediği ve Anchor programı dağıtılmadığı için ödeme düğmeleri kapalıdır. Freighter, Stellar WalletConnect, Horizon, trustline, XLM ve no-show sözleşmeleri Validex mimarisinin parçası değildir.
+## Wallet sign-in and payment safety
 
-Dağıtımdan sonra aynı program ID, RPC ve mint değerlerini web (`NEXT_PUBLIC_VALIDEX_PROGRAM_ID`, `NEXT_PUBLIC_SOLANA_RPC_URL`, `NEXT_PUBLIC_USDC_MINT`) ve API (`VALIDEX_SOLANA_PROGRAM_ID`, `VALIDEX_SOLANA_RPC_URL`, `VALIDEX_USDC_MINT`) ortamlarına yazın. İşletme başvurusu yönetici cüzdanıyla zincirde kaydedilir; işletme kampanyayı zincirde yayımlar, müşteri USDC'yi escrow'a gönderir. Kupon kullanımında işletme imzalı işlem metnini müşteriye iletir; müşteri ikinci imzayla işlemi tamamlar. Escrow aynı atomik işlemde işletmeye `%98`, platforma `%2` öder. Kampanya iptalinde veya son kullanım zamanında kullanılmamış kupon sahibi tam tutarlı iadeyi kendi cüzdanıyla talep eder; otomatik transfer yapılmaz. İptal zincirde kesinleşip API kaydı gecikirse işletme, saklanan işlem imzasıyla yalnızca API doğrulamasını yeniden dener. Zincir onayı belirsizse yeniden ödeme/iade göndermeden önce kupon durumunu kontrol edin.
+Wallet login uses a short-lived, single-use challenge signed by Solflare or Phantom. Signing the login message is not a transfer. The access token is stored per browser tab in `sessionStorage` and expires after 15 minutes. Merchant endpoints require the verified merchant role and matching owner wallet.
 
-## İşletme ve yönetici akışı
+Campaigns and vouchers are loaded from the API/PostgreSQL, not `localStorage`. A merchant creates an offer on-chain with their wallet, then the API verifies its transaction and records it. A customer starts with `POST /api/v1/vouchers/purchase-intent`, signs the `purchase_voucher` transaction, and pays into the campaign escrow ATA. The API checks the expected program, accounts, mint, amount, voucher hash, and `finalized` signature before activating the voucher. Transaction signatures are unique, so one signature cannot be reused for another voucher or campaign.
 
-İşletme cüzdanı `/isletme` ekranından başvuru oluşturur. Başvuru kişisel işletme bilgilerini zincire yazmadan PostgreSQL'de `pending` durumunda saklar. `VALIDEX_ADMIN_WALLET` içinde tanımlı tek public key `/yonetim` ekranından başvuruyu onayladığında kullanıcı `merchant` rolüne geçirilir. Alan boşsa yönetici işlemleri kapalıdır. Rol değişikliğinden sonra yeni yetkiyi içeren oturum için cüzdan bağlantısı yenilenmelidir.
+The UI never assumes a payment succeeded just because a wallet submitted it. If the tab closes, pending vouchers are checked against the voucher PDA and transaction history; payment is not automatically resubmitted. When confirmation is uncertain, inspect the chain before trying again.
+
+For redemption, the merchant scans the customer's QR code and signs a transaction. The customer must add a second wallet signature. Staff wallets may verify a QR code but cannot approve escrow payouts. A customer can request a refund after offer cancellation or voucher expiry; refunds are not automatic.
+
+Real payment buttons remain disabled until the deployed program's platform account is initialized and a merchant publishes an on-chain offer. Do not enter a private key or seed phrase into `.env`.
+
+## Devnet configuration
+
+The Devnet program ID is `5ohDEoj3QVVXSG82Fwru8BMuLP45dLWCPrirquzenmbh`; Circle Devnet USDC mint is `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`. Set the same program ID, RPC endpoint, and mint in the web and API environments:
 
 ```env
-VALIDEX_ADMIN_WALLET=YONETICI_SOLANA_PUBLIC_KEY
+VALIDEX_ADMIN_WALLET=ADMIN_SOLANA_PUBLIC_KEY
+NEXT_PUBLIC_VALIDEX_ADMIN_WALLET=ADMIN_SOLANA_PUBLIC_KEY
+VALIDEX_SOLANA_PROGRAM_ID=DEPLOYED_PROGRAM_ID
+VALIDEX_USDC_MINT=DEVNET_USDC_MINT
+NEXT_PUBLIC_VALIDEX_PROGRAM_ID=DEPLOYED_PROGRAM_ID
+NEXT_PUBLIC_USDC_MINT=DEVNET_USDC_MINT
 ```
 
-Kupon satın alma hazırlığı `POST /api/v1/vouchers/purchase-intent` ile 256-bit rastgele bir sır üretir. Sırrın SHA-256 özeti zincir işlemi için döndürülür; asıl sır sunucuda şifreli saklanır ve kupon `pending_chain` durumunda kalır. Anchor işlemi kesinleşmeden kupon aktif olmaz.
+`VALIDEX_ADMIN_WALLET` must also be present in the **Anchor build environment**, because the program pins the admin at compile time. An `.env` file alone does not supply it to `anchor build`. Keep all wallet keypairs outside the repository.
 
-Onaylı işletme sahibi, `/isletme` ekranından çalışan public key'lerine QR doğrulama yetkisi verip geri alabilir. Çalışan cüzdanı yalnızca kuponun API ve zincirde geçerli olduğunu sorgular; kupon kullanımı için işletme sahibi ve müşteri imzaları zorunlu kalır. Yönetim ekranında şüpheli QR denemeleri ve denetim kayıtları gösterilir. API giriş ve tarama uçları dakika başına sınırlandırılmıştır; mevcut sınırlayıcı tek API süreci için geçerlidir. Birden fazla sunucuya çıkmadan önce ortak bir dağıtık limit deposu gerekir.
+## Security and operations
+
+The API records suspicious QR attempts and audit events, and limits sign-in and scan requests. The current rate limiter is process-local; use a shared store before running multiple API replicas. The [architecture document](docs/architecture.md), [program guide](programs/README.md), and [API guide](services/api/README.md) provide more details.

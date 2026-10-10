@@ -44,6 +44,7 @@ class VoucherScanRequest(BaseModel):
     voucherId: uuid.UUID
     campaignId: uuid.UUID
     code: str = Field(min_length=1, max_length=64)
+    secret: str = Field(min_length=44, max_length=44)
     ownerWallet: str = Field(min_length=32, max_length=44)
     chainVoucher: str = Field(min_length=32, max_length=44)
 

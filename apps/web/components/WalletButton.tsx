@@ -35,7 +35,7 @@ export function WalletButton({ onAddressChange }: WalletButtonProps) {
       setAuthenticated(true);
     } catch (error) {
       setAuthenticated(false);
-      setAuthError(error instanceof Error ? error.message : "Cüzdan doğrulanamadı.");
+      setAuthError(error instanceof Error ? error.message : "Wallet verification failed.");
     } finally {
       setAuthenticating(false);
     }
@@ -64,26 +64,26 @@ export function WalletButton({ onAddressChange }: WalletButtonProps) {
         type="button"
       >
         {wallet.connecting
-          ? "Bağlanıyor…"
+          ? "Connecting…"
           : authenticating
-            ? "İmza bekleniyor…"
+            ? "Waiting for signature…"
             : wallet.address
-              ? `Girişi imzala · ${wallet.shortAddress}`
-              : "Cüzdana bağlan"}
+              ? `Sign in · ${wallet.shortAddress}`
+              : "Connect wallet"}
       </button>
       {chooserOpen ? (
-        <div className="walletMenu" role="dialog" aria-label="Solana cüzdanı seçin">
-          <strong>Cüzdanınızı seçin</strong>
+        <div className="walletMenu" role="dialog" aria-label="Choose a Solana wallet">
+          <strong>Choose your wallet</strong>
           {(["solflare", "phantom"] as const).map((kind) => {
             const installed = wallet.isInstalled(kind);
             const label = kind === "solflare" ? "Solflare" : "Phantom";
             return installed ? (
               <button key={kind} onClick={() => void connectAndAuthenticate(kind)} type="button">
-                <span className={`walletMark ${kind}`} /> <span>{label}<small>Solana cüzdanıyla devam et</small></span>
+                <span className={`walletMark ${kind}`} /> <span>{label}<small>Continue with Solana</small></span>
               </button>
             ) : (
               <a href={walletInstallUrl(kind)} key={kind} rel="noreferrer" target="_blank">
-                <span className={`walletMark ${kind}`} /> <span>{label}<small>Eklentiyi yükle ↗</small></span>
+                <span className={`walletMark ${kind}`} /> <span>{label}<small>Install extension ↗</small></span>
               </a>
             );
           })}

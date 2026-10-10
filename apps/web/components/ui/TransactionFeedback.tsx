@@ -1,9 +1,9 @@
 export type TransactionPhase = "idle" | "preparing" | "confirmed" | "failed";
 
 const LABELS: Record<Exclude<TransactionPhase, "idle">, { title: string; detail: string }> = {
-  preparing: { title: "Zincir işlemi izleniyor", detail: "USDC ödemesi ve API doğrulaması bekleniyor." },
-  confirmed: { title: "Kupon hazır", detail: "Zincir ve API doğrulaması tamamlandı. QR kodunu kullanabilirsiniz." },
-  failed: { title: "İşlem tamamlanamadı", detail: "Bilgileri kontrol edip yeniden deneyin." },
+  preparing: { title: "Watching on-chain transaction", detail: "Waiting for USDC payment and API verification." },
+  confirmed: { title: "Voucher ready", detail: "Chain and API verification are complete. Your QR code is ready." },
+  failed: { title: "Transaction incomplete", detail: "Check the details and try again." },
 };
 
 export function TransactionFeedback({ phase, message }: { phase: TransactionPhase; message?: string }) {

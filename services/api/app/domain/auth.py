@@ -43,13 +43,13 @@ def create_auth_challenge(
     expires_at = now + timedelta(seconds=ttl_seconds)
     message = "\n".join(
         (
-            "Validex'e giriş yap",
+            "Sign in to Validex",
             "",
-            "Bu imza herhangi bir blockchain işlemi veya ödeme oluşturmaz.",
-            f"Cüzdan: {wallet_address}",
+            "This signature does not create a blockchain transaction or payment.",
+            f"Wallet: {wallet_address}",
             f"Nonce: {nonce}",
-            f"Oluşturulma: {now.astimezone(UTC).isoformat()}",
-            f"Son kullanma: {expires_at.astimezone(UTC).isoformat()}",
+            f"Issued at: {now.astimezone(UTC).isoformat()}",
+            f"Expires at: {expires_at.astimezone(UTC).isoformat()}",
         )
     )
     return nonce, message, expires_at

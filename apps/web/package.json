@@ -11,7 +11,7 @@
     "verify": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.98.4",
+    "@solana/web3.js": "^1.99.0",
     "@zxing/browser": "^0.2.1",
     "buffer": "^6.0.3",
     "next": "^16.3.6",

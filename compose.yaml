@@ -28,10 +28,13 @@ services:
       VALIDEX_JWT_SECRET: ${VALIDEX_JWT_SECRET:-dev-only-change-this-secret-before-production-1234}
       VALIDEX_ADMIN_WALLET: ${VALIDEX_ADMIN_WALLET:-}
       VALIDEX_VOUCHER_ENCRYPTION_SECRET: ${VALIDEX_VOUCHER_ENCRYPTION_SECRET:-dev-only-voucher-encryption-secret-change-me}
+      VALIDEX_SOLANA_RPC_URL: ${VALIDEX_SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      VALIDEX_SOLANA_PROGRAM_ID: ${VALIDEX_SOLANA_PROGRAM_ID:-}
+      VALIDEX_USDC_MINT: ${VALIDEX_USDC_MINT:-}
       WATCHFILES_IGNORE_PERMISSION_DENIED: "true"
     ports:
       - "8000:8000"
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,17 +47,15 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_SOLANA_NETWORK: devnet
+      NEXT_PUBLIC_VALIDEX_ADMIN_WALLET: ${NEXT_PUBLIC_VALIDEX_ADMIN_WALLET:-}
       NEXT_PUBLIC_SOLANA_RPC_URL: ${NEXT_PUBLIC_SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      NEXT_PUBLIC_VALIDEX_PROGRAM_ID: ${NEXT_PUBLIC_VALIDEX_PROGRAM_ID:-}
       NEXT_PUBLIC_USDC_MINT: ${NEXT_PUBLIC_USDC_MINT:-}
-    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev"]
+    command: ["npm", "run", "dev"]
     ports:
       - "3000:3000"
     depends_on:
       - api
-    volumes:
-      - ./apps/web:/app
-      - validex-node-modules:/app/node_modules
 
 volumes:
   validex-postgres:
-  validex-node-modules:
