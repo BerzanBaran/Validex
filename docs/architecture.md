@@ -2,15 +2,16 @@
 
 ## Trust boundaries
 
-```text
-Solflare / Phantom wallet
-      | signed transaction / signed login message
-      v
-Next.js --------> FastAPI --------> PostgreSQL
-   |                 |                    |
-   | builds tx       | verifies/indexes   | merchant records + encrypted secrets
-   v                 v                    |
-Solana RPC <---- Anchor program <--------+ hash and address mapping
+```mermaid
+flowchart LR
+    Wallet["Solflare / Phantom wallet"] -->|signed login and transactions| Web["Next.js web app"]
+    Web -->|REST requests| API["FastAPI"]
+    API -->|merchant records, encrypted QR secrets, audit| DB[(PostgreSQL)]
+    Web -->|wallet-signed transactions| RPC["Solana RPC"]
+    API -->|finalized proof and account checks| RPC
+    RPC --> Program["Validex Anchor program"]
+    Program -->|voucher and campaign state| PDAs["Solana PDAs"]
+    Program -->|SPL Token CPI| Escrow["Campaign USDC escrow ATA"]
 ```
 
 - Wallet private keys remain with the customer or merchant, never with Validex.
@@ -35,6 +36,15 @@ Solana RPC <---- Anchor program <--------+ hash and address mapping
 5. The API verifies the finalized transaction before updating reporting records.
 
 Staff may verify a QR code, but only the merchant owner and customer can authorize redemption. After cancellation or expiry, the owner of an unused voucher can request a full escrow refund.
+
+The on-chain voucher has three states. An API `pending_chain` purchase intent is **not** an on-chain voucher and must not be shown as paid.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active: purchase_voucher + USDC escrow
+    Active --> Redeemed: merchant and customer sign; 98% / 2% payout
+    Active --> Refunded: cancelled or expired; customer signs full refund
+```
 
 ## Amounts
 

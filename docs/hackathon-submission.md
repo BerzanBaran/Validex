@@ -1,6 +1,26 @@
-# Validex — Colosseum submission pack (draft)
+# Validex — Crypto World's Fair 2026 submission pack (draft)
 
-This is a **preparation pack** with a verified Devnet program deployment, not proof of a completed wallet-to-wallet purchase or recorded video. Check the current Colosseum submission portal again before submitting.
+This is a **preparation pack** with a verified Devnet program deployment, not proof of a completed wallet-to-wallet purchase or recorded video. The [current Colosseum FAQ](https://colosseum.com/hackathon?year=fall2026), [Crypto World's Fair page](https://colosseum.com/worldsfair), and [official rules](https://colosseum.com/legal/Crypto%20World%27s%20Fair%20Hackathon%20Rules.pdf) are the sources to recheck before submitting.
+
+The official rules set the deadline at **October 12, 2026, 11:59 p.m. Pacific Time** (October 13, 09:59 in Türkiye). Do not wait for the final hour. Every team member must register; the team leader submits the product through the Colosseum platform. A team may submit only one product.
+
+## What the submission portal asks for
+
+| Material | Validex status / action |
+| --- | --- |
+| Product name and short description | `Validex`; refine the English description below for the final form |
+| Blockchains and integrated tools | Solana, Anchor, SPL Token, Circle Devnet USDC, Solflare/Phantom, Next.js, FastAPI, PostgreSQL |
+| Team members, backgrounds, and location | **User to provide**; every member must register and the leader must add them |
+| Product logo or graphic | **User to provide or approve**; no final submission graphic is in this repository |
+| GitHub repository | [Public Validex repository](https://github.com/BerzanBaran/Validex); confirm it remains accessible to judges |
+| Presentation/pitch video | **Not recorded**; prepare a clear 2–3 minute video about the team, problem, product, and business opportunity |
+| Product-demo video | **Not recorded**; prepare a separate video of at most 3 minutes showing the real product and Solana integration |
+| Go-to-market, demand validation, and distribution | Pilot hypothesis below; add actual interviews, commitments, usage, or other evidence if obtained |
+| Prior development disclosure | Disclose any work done before the contest or outside the public history, if applicable; the FAQ explicitly requires this |
+
+The public Git history begins during the September 14–October 12 contest period, but that alone does not prove there was no earlier private work. Colosseum says existing code is allowed if relevant prior work is disclosed. Its judges want to see significant team work during the sprint and strategic feature prioritization, not a particular framework or polished pattern. Weekly one-minute progress videos are recommended, not strictly required. A public hosted demo is useful for accessibility but is **not listed as a mandatory form field** in the current FAQ; do not confuse it with the required product-demo video.
+
+**Licensing decision:** The repository is public but currently has no `LICENSE` file. Public visibility is not the same as an open-source license. The team should choose and add a license only after confirming ownership and third-party asset rights; the rules explicitly ask entrants to account for third-party IP.
 
 ## Honest delivery status
 
