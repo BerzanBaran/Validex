@@ -90,7 +90,7 @@ sequenceDiagram
 
     Customer->>Web: Select an offer
     Web->>API: Request purchase intent
-    API-->>Web: Hash and pending voucher; encrypted secret stored
+    API-->>Web: Return hash and pending voucher (encrypted secret stored)
     Customer->>Chain: Sign purchase_voucher
     Chain->>Escrow: Lock offer price in USDC
     Web->>API: Submit transaction signature
